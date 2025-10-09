@@ -1,0 +1,10 @@
+[package]
+name = "notepad"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aes = "0.7"
+block-modes = "0.8"
+base64 = "0.21"
+rand = "0.8"
