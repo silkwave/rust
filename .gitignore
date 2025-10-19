@@ -1,1 +1,40 @@
-**/target 
+# Rust/Cargo
+# =================
+# 빌드 결과물, 임시 파일, 다운로드된 의존성 등을 무시합니다.
+target/
+
+# 애플리케이션의 경우, Cargo.lock 파일을 커밋하여 빌드를 재현 가능하게 만드는 것이 일반적입니다.
+# 라이브러리의 경우, 주석을 해제하여 다른 프로젝트에서 최신 의존성을 사용하도록 할 수 있습니다.
+# Cargo.lock
+
+
+# IDE 및 에디터 설정
+# =================
+# Visual Studio Code
+.vscode/
+
+# JetBrains (IntelliJ, CLion, RustRover 등)
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+
+# 운영체제(OS) 생성 파일
+# =================
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+
+# 기타
+# =================
+# 로그 파일
+*.log
+
+# 환경 변수 파일
+.env

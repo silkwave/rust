@@ -1,8 +1,0 @@
-[package]
-name = "bevy_slot_machine"
-version = "0.2.0"
-edition = "2021"
-
-[dependencies]
-bevy = "0.14"
-rand = "0.8"

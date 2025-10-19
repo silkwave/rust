@@ -1,0 +1,24 @@
+{
+  "todos": [
+    {
+      "id": 1,
+      "task": "Rust 공부하기",
+      "completed": true
+    },
+    {
+      "id": 2,
+      "task": "저녁 장보기",
+      "completed": false
+    },
+    {
+      "id": 3,
+      "task": "test",
+      "completed": false
+    },
+    {
+      "id": 4,
+      "task": "list",
+      "completed": false
+    }
+  ]
+}
