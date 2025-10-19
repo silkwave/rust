@@ -1,23 +1,24 @@
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
 
 pub struct HexCharBase26Converter;
 
 impl HexCharBase26Converter {
     // 0-9와 A-P까지의 문자 배열 (총 26개)
     const HEX_CHAR: &'static [char] = &[
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
         'K', 'L', 'M', 'N', 'O', 'P',
     ];
 
-    // 숫자->문자 맵핑 (문자 -> 값 조회에 최적화된 맵)
-    fn build_char_to_decimal_map() -> HashMap<char, usize> {
+    // Lazy static을 사용하여 char_to_decimal_map을 한 번만 초기화합니다.
+    static CHAR_TO_DECIMAL_MAP: Lazy<HashMap<char, usize>> = Lazy::new(|| {
         let mut map = HashMap::new();
         for (i, &ch) in Self::HEX_CHAR.iter().enumerate() {
             map.insert(ch, i);
         }
         map
-    }
+    });
 
     // 10진수를 26진수로 변환 (0-9, A-P까지)
     pub fn to_base26(mut number: usize) -> String {
@@ -40,11 +41,10 @@ impl HexCharBase26Converter {
             return Err("유효하지 않은 입력입니다.".to_string());
         }
 
-        let char_to_decimal_map = Self::build_char_to_decimal_map();
         let mut result = 0;
-        
+
         for c in base26.chars() {
-            match char_to_decimal_map.get(&c) {
+            match Self::CHAR_TO_DECIMAL_MAP.get(&c) {
                 Some(&value) => {
                     result = result * 26 + value; // 각 자리의 값을 계산
                 }

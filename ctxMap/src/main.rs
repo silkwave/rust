@@ -23,11 +23,12 @@ impl fmt::Display for Value {
             Value::StrList(v) => write!(f, "{:?}", v),
             Value::Map(m) => {
                 write!(f, "{{ ")?;
-                for (i, (k, v)) in m.iter().enumerate() {
-                    if i > 0 {
+                let mut iter = m.iter().peekable();
+                while let Some((k, v)) = iter.next() {
+                    write!(f, "\"{}\": {}", k, v)?;
+                    if iter.peek().is_some() {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}: {}", k, v)?;
                 }
                 write!(f, " }}")
             }

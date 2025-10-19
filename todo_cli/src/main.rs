@@ -31,7 +31,17 @@ impl TodoList {
         }
         let file = File::open(filename)?;
         let reader = BufReader::new(file);
-        let list = serde_json::from_reader(reader).unwrap_or_else(|_| TodoList::new());
+        let list = match serde_json::from_reader(reader) {
+            Ok(list) => list,
+            Err(e) if e.is_eof() => TodoList::new(), // 파일이 비어있으면 새 목록
+            Err(e) => {
+                eprintln!(
+                    "경고: '{}' 파일 분석 중 오류 발생. 새 목록을 시작합니다. (오류: {})",
+                    filename, e
+                );
+                TodoList::new()
+            }
+        };
         Ok(list)
     }
 
@@ -55,7 +65,10 @@ impl TodoList {
             task,
             completed: false,
         };
-        println!("'{}' 할 일이 추가되었습니다. (ID: {})", new_todo.task, new_todo.id);
+        println!(
+            "'{}' 할 일이 추가되었습니다. (ID: {})",
+            new_todo.task, new_todo.id
+        );
         self.todos.push(new_todo);
     }
 
