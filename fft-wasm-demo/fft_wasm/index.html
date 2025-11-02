@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Rust FFT + WebAssembly 시각화</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f1720;
+      color: #e2e8f0;
+      text-align: center;
+    }
+    canvas {
+      background: #111827;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ Rust FFT (WASM) 시각화</h1>
+  <button id="run">FFT 실행</button>
+  <canvas id="graph" width="600" height="300"></canvas>
+
+  <script type="module">
+    import init, { fft_js } from "./pkg/fft_wasm.js";
+
+    const canvas = document.getElementById("graph");
+    const ctx = canvas.getContext("2d");
+
+    async function main() {
+      await init();
+
+      const N = 64;
+      // 테스트용 신호: sin + 0.5cos
+      const real = Array.from({length: N}, (_, i) =>
+        Math.sin(2 * Math.PI * i / N * 3) + 0.5 * Math.cos(2 * Math.PI * i / N * 5)
+      );
+      const imag = new Array(N).fill(0);
+
+      const result = fft_js(real, imag);
+
+      // 진폭 스펙트럼 계산
+      const amplitude = [];
+      for (let i = 0; i < result.length; i += 2) {
+        const re = result[i], im = result[i + 1];
+        amplitude.push(Math.sqrt(re * re + im * im));
+      }
+
+      draw(amplitude);
+    }
+
+    function draw(amplitude) {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+
+      const scaleX = w / amplitude.length;
+      const scaleY = h / Math.max(...amplitude);
+
+      amplitude.forEach((amp, i) => {
+        const x = i * scaleX;
+        const y = h - amp * scaleY * 0.8;
+        ctx.lineTo(x, y);
+      });
+
+      ctx.strokeStyle = "#60a5fa";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    document.getElementById("run").onclick = main;
+  </script>
+</body>
+</html>

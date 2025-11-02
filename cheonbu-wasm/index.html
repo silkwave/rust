@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>천부경 시각화 — WASM</title>
+    <style>
+        :root {
+            --bg: #071023;
+            --card: #0b1630;
+            --muted: #9fb0c8;
+            --accent: #ffd166;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: Inter, "Noto Sans KR", system-ui, sans-serif;
+            color: #e6f0fa;
+            background: linear-gradient(180deg, var(--bg), #04121a);
+        }
+
+        .app {
+            display: flex;
+            gap: 16px;
+            height: 100%;
+            padding: 18px;
+            box-sizing: border-box
+        }
+
+        .canvas-wrap {
+            flex: 1;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(2, 6, 23, 0.6);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 360px;
+            background: linear-gradient(180deg, var(--card), #051226);
+            border-radius: 12px;
+            padding: 16px;
+            box-sizing: border-box;
+            color: var(--muted);
+            box-shadow: 0 6px 18px rgba(2, 6, 23, 0.5);
+        }
+
+        h1 {
+            margin: 4px 0 12px 0;
+            font-size: 18px;
+            color: var(--accent);
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 10px
+        }
+
+        input[type=range] {
+            width: 100%
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(255, 209, 102, 0.12);
+            border: 1px solid rgba(255, 209, 102, 0.08);
+            color: var(--accent);
+            cursor: pointer;
+            margin-top: 10px
+        }
+
+        .small {
+            font-size: 12px;
+            color: #9fb0c8
+        }
+
+        .verse {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #dceefb
+        }
+
+        .footer {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            color: #98b6d3;
+            font-size: 12px
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--muted)
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <div class="canvas-wrap" id="stage">
+            <canvas id="c"></canvas>
+            <div class="footer">천부경 시각화 — 일(一)·삼(三)·만(萬) · 천·지·인</div>
+        </div>
+
+        <aside class="sidebar">
+            <h1>천부경 시각화</h1>
+            <div class="small">간단한 철학적 시각화 + 텍스트 전시</div>
+
+            <label>파티클 수 <span id="countLabel" class="small">180</span></label>
+            <input id="count" type="range" min="10" max="800" value="180">
+
+            <label>속도 <span id="speedLabel" class="small">1.0</span></label>
+            <input id="speed" type="range" min="0" max="3" step="0.05" value="1">
+
+            <label>리듬(박자) <span id="beatLabel" class="small">1</span></label>
+            <input id="beat" type="range" min="0.2" max="3" step="0.1" value="1">
+
+            <label>테마</label>
+            <select id="theme">
+                <option value="taegeuk">태극 (천·지·인 색)</option>
+                <option value="monochrome">단색 (심플)</option>
+                <option value="fire">불(강렬)</option>
+                <option value="water">물(차분)</option>
+            </select>
+
+            <div style="margin-top:10px" class="controls-row">
+                <button id="toggle" class="btn">일시정지</button>
+                <button id="nextVerse" class="btn">다음 구절</button>
+                <button id="reset" class="btn">리셋</button>
+            </div>
+
+            <div class="verse" id="verseBox">
+                <!-- 초기 구절 -->
+            </div>
+
+            <div style="margin-top:12px" class="small">
+                사용법: 슬라이더/테마로 비주얼을 조절하세요. "다음 구절"으로 천부경 문구를 순회합니다.
+            </div>
+        </aside>
+    </div>
+
+    <script type="module">
+        import init, { App } from './pkg/cheonbu_wasm.js';
+
+        async function run() {
+            await init();
+
+            const canvas = document.getElementById('c');
+            const stage = document.getElementById('stage');
+            canvas.width = stage.clientWidth;
+            canvas.height = stage.clientHeight;
+
+            const app = new App(canvas);
+
+            const countInput = document.getElementById('count');
+            const speedInput = document.getElementById('speed');
+            const beatInput = document.getElementById('beat');
+            const themeSel = document.getElementById('theme');
+            const toggleBtn = document.getElementById('toggle');
+            const nextVerseBtn = document.getElementById('nextVerse');
+            const resetBtn = document.getElementById('reset');
+            const verseBox = document.getElementById('verseBox');
+            const countLabel = document.getElementById('countLabel');
+            const speedLabel = document.getElementById('speedLabel');
+            const beatLabel = document.getElementById('beatLabel');
+
+            countInput.addEventListener('input', (e) => {
+                const count = parseInt(e.target.value);
+                countLabel.textContent = count;
+                app.update_count(count);
+            });
+
+            speedInput.addEventListener('input', (e) => {
+                const speed = parseFloat(e.target.value);
+                speedLabel.textContent = speed.toFixed(2);
+                app.update_speed(speed);
+            });
+
+            beatInput.addEventListener('input', (e) => {
+                const beat = parseFloat(e.target.value);
+                beatLabel.textContent = beat.toFixed(2);
+                app.update_beat(beat);
+            });
+
+            themeSel.addEventListener('change', (e) => {
+                app.update_theme(e.target.value);
+            });
+
+            toggleBtn.addEventListener('click', () => {
+                app.toggle_pause();
+                toggleBtn.textContent = app.is_paused() ? '재개' : '일시정지';
+            });
+
+            nextVerseBtn.addEventListener('click', () => {
+                app.next_verse();
+            });
+
+            resetBtn.addEventListener('click', () => {
+                const count = parseInt(countInput.value);
+                app.reset(count);
+            });
+        }
+
+        run();
+    </script>
+</body>
+
+</html>
