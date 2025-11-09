@@ -3,83 +3,259 @@
 <head>
   <meta charset="utf-8" />
   <title>Rust FFT + WebAssembly 시각화</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg-color: #1e293b;
+      --text-color: #e2e8f0;
+      --label-color: #94a3b8;
+      --border-color: #334155;
+      --primary-color: #38bdf8;
+      --primary-hover-color: #7dd3fc;
+    }
     body {
-      font-family: system-ui, sans-serif;
-      background: #0f1720;
-      color: #e2e8f0;
-      text-align: center;
+      font-family: 'Noto Sans KR', system-ui, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 2rem;
+    }
+    h1 {
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .container {
+      background: var(--card-bg-color);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 900px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    label {
+      font-size: 0.9rem;
+      color: var(--label-color);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      background: var(--border-color);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--primary-hover-color);
+    }
+    .canvas-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    .canvas-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
     }
     canvas {
-      background: #111827;
-      border-radius: 12px;
-      margin-top: 20px;
-    }
-    button {
-      background: #2563eb;
-      color: white;
-      padding: 10px 20px;
-      border: none;
+      background: #0f172a;
       border-radius: 8px;
-      cursor: pointer;
+      width: 100%;
+      height: auto;
+    }
+    .canvas-title {
+      text-align: center;
+      font-weight: 500;
+      color: var(--label-color);
     }
   </style>
 </head>
 <body>
   <h1>⚡ Rust FFT (WASM) 시각화</h1>
-  <button id="run">FFT 실행</button>
-  <canvas id="graph" width="600" height="300"></canvas>
+  
+  <div class="container">
+    <div class="controls">
+      <div class="control-group">
+        <label for="samples">샘플 수 (N): <span id="samples-val">128</span></label>
+        <input type="range" id="samples" min="32" max="512" step="32" value="128">
+      </div>
+      <div class="control-group">
+        <label for="freq1">신호 1 주파수: <span id="freq1-val">5</span></label>
+        <input type="range" id="freq1" min="1" max="30" value="5">
+      </div>
+      <div class="control-group">
+        <label for="amp1">신호 1 진폭: <span id="amp1-val">1.0</span></label>
+        <input type="range" id="amp1" min="0.1" max="2.0" step="0.1" value="1.0">
+      </div>
+      <div class="control-group">
+        <label for="freq2">신호 2 주파수: <span id="freq2-val">15</span></label>
+        <input type="range" id="freq2" min="1" max="30" value="15">
+      </div>
+      <div class="control-group">
+        <label for="amp2">신호 2 진폭: <span id="amp2-val">0.5</span></label>
+        <input type="range" id="amp2" min="0.1" max="2.0" step="0.1" value="0.5">
+      </div>
+    </div>
+
+    <div class="canvas-grid">
+      <div class="canvas-container">
+        <h2 class="canvas-title">입력 신호 (시간 영역)</h2>
+        <canvas id="signal-canvas" width="800" height="250"></canvas>
+      </div>
+      <div class="canvas-container">
+        <h2 class="canvas-title">FFT 결과 (주파수 영역)</h2>
+        <canvas id="fft-canvas" width="800" height="250"></canvas>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import init, { fft_js } from "./pkg/fft_wasm.js";
 
-    const canvas = document.getElementById("graph");
-    const ctx = canvas.getContext("2d");
+    const signalCanvas = document.getElementById("signal-canvas");
+    const fftCanvas = document.getElementById("fft-canvas");
+    const signalCtx = signalCanvas.getContext("2d");
+    const fftCtx = fftCanvas.getContext("2d");
 
-    async function main() {
-      await init();
+    const controls = {
+      samples: document.getElementById("samples"),
+      freq1: document.getElementById("freq1"),
+      amp1: document.getElementById("amp1"),
+      freq2: document.getElementById("freq2"),
+      amp2: document.getElementById("amp2"),
+    };
 
-      const N = 64;
-      // 테스트용 신호: sin + 0.5cos
-      const real = Array.from({length: N}, (_, i) =>
-        Math.sin(2 * Math.PI * i / N * 3) + 0.5 * Math.cos(2 * Math.PI * i / N * 5)
-      );
-      const imag = new Array(N).fill(0);
+    const values = {
+      samples: document.getElementById("samples-val"),
+      freq1: document.getElementById("freq1-val"),
+      amp1: document.getElementById("amp1-val"),
+      freq2: document.getElementById("freq2-val"),
+      amp2: document.getElementById("amp2-val"),
+    };
 
-      const result = fft_js(real, imag);
-
-      // 진폭 스펙트럼 계산
-      const amplitude = [];
-      for (let i = 0; i < result.length; i += 2) {
-        const re = result[i], im = result[i + 1];
-        amplitude.push(Math.sqrt(re * re + im * im));
-      }
-
-      draw(amplitude);
+    function updateLabel(key) {
+      values[key].textContent = controls[key].value;
     }
 
-    function draw(amplitude) {
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-      ctx.beginPath();
-      ctx.moveTo(0, h);
+    async function run() {
+      await init();
+      
+      function process() {
+        const N = parseInt(controls.samples.value);
+        const freq1 = parseFloat(controls.freq1.value);
+        const amp1 = parseFloat(controls.amp1.value);
+        const freq2 = parseFloat(controls.freq2.value);
+        const amp2 = parseFloat(controls.amp2.value);
 
-      const scaleX = w / amplitude.length;
-      const scaleY = h / Math.max(...amplitude);
+        // 입력 신호 생성
+        const real = Array.from({length: N}, (_, i) =>
+          amp1 * Math.sin(2 * Math.PI * i / N * freq1) +
+          amp2 * Math.cos(2 * Math.PI * i / N * freq2)
+        );
+        const imag = new Array(N).fill(0);
 
-      amplitude.forEach((amp, i) => {
-        const x = i * scaleX;
-        const y = h - amp * scaleY * 0.8;
-        ctx.lineTo(x, y);
+        // FFT 실행
+        const result = fft_js(new Float64Array(real), new Float64Array(imag));
+
+        // 진폭 스펙트럼 계산
+        const amplitude = [];
+        for (let i = 0; i < result.length / 2; i += 2) {
+          const re = result[i], im = result[i + 1];
+          amplitude.push(Math.sqrt(re * re + im * im) / (N/2));
+        }
+        
+        drawSignal(signalCtx, real);
+        drawFFT(fftCtx, amplitude);
+      }
+
+      Object.keys(controls).forEach(key => {
+        updateLabel(key);
+        controls[key].addEventListener("input", () => {
+          updateLabel(key);
+          process();
+        });
       });
 
-      ctx.strokeStyle = "#60a5fa";
+      process();
+    }
+
+    function drawAxis(ctx, w, h) {
+        ctx.strokeStyle = "rgba(150, 150, 150, 0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+    }
+
+    function drawSignal(ctx, data) {
+      const w = ctx.canvas.width;
+      const h = ctx.canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      
+      drawAxis(ctx, w, h);
+
+      ctx.beginPath();
+      const maxVal = Math.max(...data.map(Math.abs)) * 1.2 || 1;
+      
+      data.forEach((val, i) => {
+        const x = (i / data.length) * w;
+        const y = h/2 - (val / maxVal) * (h/2);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+
+      ctx.strokeStyle = "#a78bfa";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
-    document.getElementById("run").onclick = main;
+    function drawFFT(ctx, amplitude) {
+      const w = ctx.canvas.width;
+      const h = ctx.canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const maxAmp = Math.max(...amplitude) * 1.2 || 1;
+
+      amplitude.forEach((amp, i) => {
+        const x = (i / amplitude.length) * w;
+        const y = h - (amp / maxAmp) * h;
+        
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillRect(x, y, w / amplitude.length * 0.8, h - y);
+      });
+    }
+
+    run();
   </script>
 </body>
 </html>
