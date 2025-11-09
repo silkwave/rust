@@ -1,0 +1,40 @@
+use std::env;
+
+fn main() {
+    // 커맨드라인 인자들을 수집합니다 (프로그램 이름은 제외).
+    let args: Vec<String> = env::args().skip(1).collect();
+
+    // 인자가 하나도 없으면, 사용법을 출력하고 종료합니다.
+    if args.is_empty() {
+        println!("사용법: cargo run -- <숫자1> <숫자2> <숫자3> ...");
+        println!("예시: cargo run -- 10 5 23 8");
+        return;
+    }
+
+    // 문자열 인자들을 i32 타입의 숫자 벡터로 변환합니다.
+    // 변환에 실패하는 (숫자가 아닌) 인자는 무시됩니다.
+    let numbers: Vec<i32> = args
+        .into_iter()
+        .filter_map(|s| s.parse::<i32>().ok())
+        .collect();
+
+    // 유효한 숫자가 하나도 없으면, 에러 메시지를 출력하고 종료합니다.
+    if numbers.is_empty() {
+        eprintln!("오류: 유효한 숫자가 입력되지 않았습니다.");
+        return;
+    }
+
+    // 합계, 최솟값, 최댓값을 계산합니다.
+    // .sum()은 합계를 바로 계산합니다.
+    // .min()과 .max()는 Option을 반환하므로, unwrap()으로 값을 추출합니다.
+    // numbers 벡터가 비어있지 않음을 위에서 확인했으므로 unwrap()은 안전합니다.
+    let sum: i32 = numbers.iter().sum();
+    let min = *numbers.iter().min().unwrap();
+    let max = *numbers.iter().max().unwrap();
+
+    // 결과를 출력합니다.
+    println!("계산 대상 숫자: {:?}", numbers);
+    println!("- 합계 (Sum): {}", sum);
+    println!("- 최솟값 (Min): {}", min);
+    println!("- 최댓값 (Max): {}", max);
+}
