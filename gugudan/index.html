@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>구구단</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f0f2f5;
+        color: #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+      }
+      .container {
+        background-color: #fff;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        width: 320px;
+      }
+      h1 {
+        color: #1877f2;
+        margin-bottom: 0.5rem;
+      }
+      p {
+        color: #606770;
+        margin-bottom: 1.5rem;
+      }
+      #gugudan-input {
+        width: calc(100% - 20px);
+        padding: 10px;
+        border: 1px solid #dddfe2;
+        border-radius: 6px;
+        font-size: 1rem;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      #gugudan-button {
+        width: 100%;
+        padding: 12px;
+        background-color: #1877f2;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      #gugudan-button:hover {
+        background-color: #166fe5;
+      }
+      #output-container {
+        margin-top: 1.5rem;
+        text-align: left;
+      }
+      h2 {
+        font-size: 1.2rem;
+        color: #1c1e21;
+        border-bottom: 1px solid #dddfe2;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      #gugudan-output {
+        background-color: #f7f7f7;
+        padding: 1rem;
+        border-radius: 6px;
+        white-space: pre-wrap;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>구구단</h1>
+      <p>구구단을 보고 싶은 숫자를 입력하세요.</p>
+      <input type="number" id="gugudan-input" value="2" min="1" max="99">
+      <button id="gugudan-button">계산</button>
+      <div id="output-container">
+        <h2>결과</h2>
+        <pre id="gugudan-output"></pre>
+      </div>
+    </div>
+    <script type="module">
+      // wasm 모듈과 구구단 함수를 가져옵니다.
+      import init, { gugudan } from './pkg/gugudan.js';
+
+      async function run() {
+        // wasm 모듈을 초기화합니다.
+        await init();
+
+        const input = document.getElementById('gugudan-input');
+        const output = document.getElementById('gugudan-output');
+        const button = document.getElementById('gugudan-button');
+        const outputContainer = document.getElementById('output-container');
+
+        function calculate() {
+          const n = parseInt(input.value, 10);
+          if (!isNaN(n) && n > 0) {
+            output.textContent = gugudan(n);
+            outputContainer.style.display = 'block';
+          } else {
+            outputContainer.style.display = 'none';
+          }
+        }
+
+        // 버튼 클릭 이벤트 리스너를 추가합니다.
+        button.addEventListener('click', calculate);
+
+        // 페이지 로드 시 초기 구구단을 표시합니다.
+        calculate();
+      }
+
+      run();
+    </script>
+  </body>
+</html>

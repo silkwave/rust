@@ -1,0 +1,15 @@
+{
+  "name": "gugudan",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "gugudan_bg.wasm",
+    "gugudan.js",
+    "gugudan.d.ts"
+  ],
+  "main": "gugudan.js",
+  "types": "gugudan.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
