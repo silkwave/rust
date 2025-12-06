@@ -1,9 +1,19 @@
 [package]
-name = "todo_cli"
+name = "todo_wasm"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+
+[lib]
+# 이 부분이 라이브러리 (Wasm 모듈)로 빌드되도록 설정합니다.
+crate-type = ["cdylib"] 
 
 [dependencies]
-clap = { version = "4.5.49", features = ["derive"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
+# Wasm과 JS 간의 상호 작용을 위한 핵심 라이브러리
+wasm-bindgen = "0.2" 
+# To-Do 항목 직렬화/역직렬화에 사용 (JS에서 JSON으로 주고받기 위함)
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# 브라우저 콘솔 로그를 사용하기 위한 유틸리티
+web-sys = { version = "0.3", features = [
+    'console',
+] }

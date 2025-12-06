@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Rust Wasm To-Do List</title>
+</head>
+<body>
+    <h1>Rust Wasm 할 일 목록</h1>
+
+    <input type="text" id="new-task" placeholder="새 할 일 입력">
+    <button onclick="addTask()">추가</button>
+
+    <ul id="todo-list">
+        </ul>
+
+    <script type="module">
+        // 1. Wasm 모듈을 임포트합니다.
+        // 'todo_wasm'은 Cargo.toml의 package name과 일치해야 합니다.
+        import init, { add_todo, complete_todo, remove_todo, get_todos } from './pkg/todo_wasm.js';
+
+        // 2. DOM 요소 참조
+        const listElement = document.getElementById('todo-list');
+        const inputElement = document.getElementById('new-task');
+
+        // 3. 목록을 HTML로 렌더링하는 함수
+        function renderList(jsonList) {
+            const todos = JSON.parse(jsonList);
+            listElement.innerHTML = ''; // 기존 목록 초기화
+
+            todos.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span style="text-decoration: ${item.completed ? 'line-through' : 'none'};">
+                        [ID ${item.id}] ${item.task}
+                    </span>
+                    <button onclick="completeTask(${item.id})" ${item.completed ? 'disabled' : ''}>완료</button>
+                    <button onclick="removeTask(${item.id})">삭제</button>
+                `;
+                listElement.appendChild(li);
+            });
+        }
+
+        // 4. 이벤트 핸들러 (JS -> Wasm 호출)
+        
+        // window 객체에 함수를 노출하여 HTML의 onclick에서 호출 가능하게 합니다.
+        window.addTask = function() {
+            const task = inputElement.value.trim();
+            if (task) {
+                // Wasm 함수 호출 및 반환된 목록으로 업데이트
+                const updatedList = add_todo(task); 
+                renderList(updatedList);
+                inputElement.value = ''; // 입력 필드 초기화
+            }
+        }
+
+        window.completeTask = function(id) {
+            const updatedList = complete_todo(id);
+            renderList(updatedList);
+        }
+
+        window.removeTask = function(id) {
+            const updatedList = remove_todo(id);
+            renderList(updatedList);
+        }
+
+
+        // 5. Wasm 초기화 및 초기 목록 로드
+        async function run() {
+            // Wasm 모듈 초기화
+            await init(); 
+            
+            // 초기 목록 로드
+            const initialList = get_todos();
+            renderList(initialList);
+            
+            console.log("Wasm 모듈 로드 완료");
+        }
+
+        run();
+    </script>
+</body>
+</html>

@@ -19,6 +19,21 @@
       "id": 4,
       "task": "list",
       "completed": false
+    },
+    {
+      "id": 5,
+      "task": "todo",
+      "completed": false
+    },
+    {
+      "id": 6,
+      "task": "todo",
+      "completed": false
+    },
+    {
+      "id": 7,
+      "task": "list",
+      "completed": false
     }
   ]
 }
