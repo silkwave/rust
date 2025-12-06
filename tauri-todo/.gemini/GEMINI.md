@@ -1,0 +1,1 @@
+- The user requested to create a new `GEMINI.md` file, which I have done.
