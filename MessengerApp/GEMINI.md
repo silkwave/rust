@@ -1,49 +1,75 @@
 # 사내 메신저 (MessengerApp)
 
 ## 프로젝트 개요
-이 프로젝트는 Rust 언어와 Egui 프레임워크를 사용하여 개발된 간단한 사내 메신저 애플리케이션입니다. 사용자들은 채팅방에서 메시지를 주고받을 수 있으며, `Pretendard` 폰트를 적용하여 깔끔한 한글 UI를 제공합니다.
+1. 코드 설명 및 보완점
+    *   **UI 구성**: `eframe`과 `egui`를 사용하여 직관적인 인터페이스를 구성했습니다. `ScrollArea`를 통해 메시지가 많아져도 스크롤이 가능합니다. UI는 `ctx.request_repaint()`를 통해 지속적으로 갱신되어 새로운 메시지를 즉시 표시합니다.
 
-## 주요 기능
-*   **채팅 메시지 전송**: 사용자가 메시지를 입력하고 엔터 키 또는 '전송' 버튼을 눌러 메시지를 보낼 수 있습니다.
-*   **채팅 기록 표시**: 전송된 메시지들은 중앙 패널에 스크롤 가능한 형태로 표시됩니다.
-*   **사용자 목록**: 왼쪽 사이드바에 고정된 사용자 목록(김철수 팀장, 이영희 대리 등)을 표시합니다.
-*   **커스텀 폰트 적용**: `Pretendard-Regular.ttf` 폰트를 로드하여 한글을 정상적으로 표시합니다.
-*   **실행 환경 예외 처리**: GUI를 지원하지 않는 환경(Headless)에서 실행 시, 적절한 에러 메시지와 가이드를 출력합니다.
+    *   **한글 폰트 적용**: 한글 깨짐 문제를 해결하기 위해 `Pretendard-Regular.ttf` 폰트를 `assets/fonts/Pretendard-Regular.ttf` 경로에서 로드하여 `egui`의 기본 폰트로 설정했습니다. 이는 `P2PChatApp::new` 함수에서 `egui::FontDefinitions`를 사용하여 `Pretendard-Regular` 폰트를 추가하고 `Proportional` 및 `Monospace` 폰트 계열의 첫 번째 폰트로 지정함으로써 이루어집니다.
 
-## 사용 기술
-*   **Rust**: 안정성, 성능 및 신뢰성을 강조하는 프로그래밍 언어입니다.
-*   **Eframe**: Egui 애플리케이션을 빌드하기 위한 프레임워크입니다.
-*   **Egui**: Rust로 작성된 즉시 모드(immediate mode) GUI 라이브러리입니다.
+    *   **P2P 통신**: `std::net::UdpSocket`을 사용하여 서버 없이 데이터를 주고받습니다. `UdpSocket::bind("0.0.0.0:8080")`을 통해 8080 포트에 바인딩하며, `socket.set_broadcast(true)`를 설정하여 브로드캐스트 통신을 가능하게 합니다. 같은 LAN 환경이라면 상대방의 로컬 IP를 입력하여 즉시 대화가 가능합니다.
 
-## 프로젝트 실행 방법
+    *   **멀티스레딩**: 메시지 수신 로직은 별도의 `thread::spawn` 스레드에서 실행되어 UI가 멈추지 않도록(Non-blocking) 설계했습니다. 메시지 기록은 `Arc<Mutex<Vec<String>>>`를 사용하여 여러 스레드 간에 안전하게 공유되고 접근됩니다.
 
-1.  **사전 준비 (폰트 파일)**:
-    *   프로젝트 루트 기준 `assets/fonts/` 디렉토리에 `Pretendard-Regular.ttf` 파일이 위치해야 합니다.
-    *   해당 파일이 없거나 더미 파일일 경우 경고 메시지가 출력될 수 있습니다.
+    *   **보안 강화**: 메시지 전송 시 `aes-gcm` 크레이트를 이용한 AES-256-GCM 암호화를 적용했습니다. 메시지를 보내기 전에 `nonce`와 함께 암호화하고, 수신된 메시지는 `hex` 디코딩 후 복호화하여 보안을 강화합니다. 이를 위해 `KEY` 상수를 정의하고 `Aes256Gcm` 암호화기를 초기화하여 사용합니다.
 
-2.  **애플리케이션 실행 (개발 모드)**:
-    ```bash
-    cargo run
-    ```
-    *주의: SSH나 WSL 등 디스플레이가 없는 환경에서는 실행되지 않습니다.*
+    *   **사용자 자동 탐색**: UDP 브로드캐스트 기능을 활용하여 네트워크 내의 다른 사용자를 자동으로 탐색합니다. `P2PChatApp::new` 함수 내에서 별도의 스레드가 `8081` 포트를 통해 주기적으로 암호화된 `DISCOVERY_PING` 메시지를 브로드캐스트하고, 응답을 수신하여 `discovered_users` 목록을 업데이트합니다. UI에서는 발견된 사용자 목록을 표시하고, 클릭 시 해당 사용자의 IP를 대상 IP로 설정할 수 있도록 합니다.
 
-3.  **Windows 실행 파일 생성**:
+2.  **Windows 실행 파일 생성**:
     ```bash
     cargo build --release --target x86_64-pc-windows-gnu
     ```
     생성된 실행 파일: `target/x86_64-pc-windows-gnu/release/MessengerApp.exe`
 
-## 코드 구조
-*   `src/main.rs`:
-    *   **윈도우 설정**: 릴리스 빌드 시 콘솔 창을 숨기기 위해 `#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]` 속성을 사용합니다.
-    *   **폰트 설정**: `assets/fonts` 경로의 폰트 파일을 바이너리에 포함(`include_bytes!`)하고 Egui 컨텍스트에 설정합니다.
-    *   **UI 구성**: `SidePanel`(사용자 목록), `TopBottomPanel`(입력창), `CentralPanel`(채팅 기록)로 레이아웃이 구성되어 있습니다.
-    *   **이벤트 처리**: 버튼 클릭 및 엔터 키 입력을 감지하여 메시지를 `chat_history` 벡터에 추가합니다.
-*   `Cargo.toml`: 프로젝트 의존성(`eframe` 등) 정의.
+## 이터레이터 예제
+Rust에서는 `Iterator` 트레이트를 구현하여 반복자를 만들 수 있습니다. 다음은 0부터 n까지 숫자를 생성하는 간단한 반복자 예제입니다.
+
+```rust
+struct Counter {
+    count: usize,
+    max: usize,
+}
+
+impl Counter {
+    fn new(max: usize) -> Counter {
+        Counter { count: 0, max }
+    }
+}
+
+impl Iterator for Counter {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.count < self.max {
+            self.count += 1;
+            Some(self.count - 1)
+        } else {
+            None
+        }
+    }
+}
+
+fn main() {
+    let mut counter = Counter::new(5);
+    for i in counter {
+        println!("{}", i); // 0, 1, 2, 3, 4 출력
+    }
+
+    let sum: usize = Counter::new(4).sum(); // 0 + 1 + 2 + 3 = 6
+    println!("Sum: {}", sum);
+}
+```
+
+## 빌드 환경 및 문제 해결
+*   **Windows GNU 크로스 컴파일 문제**:
+    Linux 환경에서 `x86_64-pc-windows-gnu` 타겟으로 크로스 컴파일 시, `eframe`의 내부 의존성인 `winapi` 크레이트에서 `winuser` 및 `windef` 기능이 활성화되지 않아 컴파일 오류가 발생할 수 있습니다.
+    이를 해결하기 위해 `Cargo.toml` 파일에 `winapi`를 직접 의존성으로 추가하고 필요한 기능을 명시적으로 활성화했습니다.
+
+    ```toml
+    winapi = { version = "0.3", features = ["winuser", "windef"] }
+    ```
+    이 설정은 `winapi` 크레이트가 올바른 Windows API 기능과 함께 컴파일되도록 강제하여, `eframe`이 해당 기능을 사용할 수 있도록 합니다.
 
 ## 개발 노트
-*   **더미 폰트 체크**: 폰트 파일이 "This is a dummy"로 시작하는 경우, 실제 폰트가 아님을 감지하고 경고를 출력하는 로직이 포함되어 있습니다.
-*   **데이터 지속성**: 현재 메시지는 메모리에만 저장되며 프로그램 종료 시 사라집니다.
 
 ## 라이선스
-[필요한 경우 라이선스 정보 추가]
+[필요한 경우 라이선스 추가]
