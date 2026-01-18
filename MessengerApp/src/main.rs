@@ -1,6 +1,84 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
+use chrono::{Local, DateTime};
+use serde::{Deserialize, Serialize};
+
+mod ui; // Add this line
+
+// 메시지 구조체 정의
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct Message {
+    sender: String,
+    content: String,
+    timestamp: DateTime<Local>,
+}
+
+impl Message {
+    fn new(sender: String, content: String) -> Self {
+        Self {
+            sender,
+            content,
+            timestamp: Local::now(),
+        }
+    }
+
+    fn to_display_string(&self) -> String {
+        format!(
+            "[{}] {}: {}",
+            self.timestamp.format("%H:%M"),
+            self.sender,
+            self.content
+        )
+    }
+}
+
+// 사용자 구조체 정의
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct User {
+    id: String,
+    name: String,
+    is_online: bool,
+}
+
+impl User {
+    fn new(id: String, name: String, is_online: bool) -> Self {
+        Self { id, name, is_online }
+    }
+}
+
+// 메신저 애플리케이션의 상태를 관리하는 구조체
+struct ChatApp {
+    chat_history: Vec<Message>,
+    current_message_input: String,
+    user_name: String,
+    users: Vec<User>,
+}
+
+impl Default for ChatApp {
+    fn default() -> Self {
+        Self {
+            chat_history: vec![
+                Message::new("시스템".to_string(), "사내 메신저에 접속되었습니다.".to_string()),
+            ],
+            current_message_input: String::new(),
+            user_name: "나".to_string(),
+            users: vec![
+                User::new("kim".to_string(), "김철수 팀장".to_string(), true),
+                User::new("lee".to_string(), "이영희 대리".to_string(), true),
+                User::new("me".to_string(), "나".to_string(), true),
+            ],
+        }
+    }
+}
+
+impl eframe::App for ChatApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ui::render_side_panel(ctx, &self.users);
+        ui::render_bottom_panel(ctx, &mut self.current_message_input, &mut self.chat_history, &self.user_name);
+        ui::render_central_panel(ctx, &self.chat_history);
+    }
+}
 
 fn main() {
     let native_options = eframe::NativeOptions::default();
@@ -37,7 +115,7 @@ fn main() {
 
             cc.egui_ctx.set_fonts(fonts);
 
-            Ok(Box::new(MessengerApp::default()))
+            Ok(Box::new(ChatApp::default())) // MessengerApp 대신 ChatApp 사용
         }),
     );
 
@@ -48,69 +126,3 @@ fn main() {
     }
 }
 
-struct MessengerApp {
-    chat_history: Vec<(String, String)>, // (이름, 메시지)
-    current_message: String,
-    user_name: String,
-}
-
-impl Default for MessengerApp {
-    fn default() -> Self {
-        Self {
-            chat_history: vec![
-                ("시스템".to_string(), "사내 메신저에 접속되었습니다.".to_string()),
-            ],
-            current_message: String::new(),
-            user_name: "나".to_string(),
-        }
-    }
-}
-
-impl eframe::App for MessengerApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // 1. 왼쪽 사이드바 (사용자 목록)
-        egui::SidePanel::left("user_panel").show(ctx, |ui| {
-            ui.heading("접속자 목록");
-            ui.separator();
-            ui.label("👤 김철수 팀장");
-            ui.label("👤 이영희 대리");
-            ui.label("✅ 나 (온라인)");
-        });
-
-        // 2. 하단 입력창 영역
-        egui::TopBottomPanel::bottom("input_panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let res = ui.add(
-                    egui::TextEdit::singleline(&mut self.current_message)
-                        .hint_text("메시지를 입력하세요...")
-                        .desired_width(f32::INFINITY),
-                );
-
-                // 엔터키를 누르거나 전송 버튼 클릭 시 메시지 추가
-                if (ui.button("전송").clicked() || (res.lost_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)))) 
-                   && !self.current_message.is_empty() 
-                {
-                    self.chat_history.push((self.user_name.clone(), self.current_message.clone()));
-                    self.current_message.clear();
-                    res.request_focus(); // 입력창 포커스 유지
-                }
-            });
-            ui.add_space(10.0);
-        });
-
-        // 3. 중앙 채팅창 영역
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("💬 팀 채팅방");
-            ui.separator();
-
-            egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
-                for (name, msg) in &self.chat_history {
-                    ui.horizontal(|ui| {
-                        ui.label(egui::RichText::new(format!("{}:", name)).strong());
-                        ui.label(msg);
-                    });
-                }
-            });
-        });
-    }
-}

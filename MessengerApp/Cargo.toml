@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 eframe = "0.29" # 2026년 기준 최신 버전을 확인하세요
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
