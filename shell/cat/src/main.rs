@@ -2,69 +2,108 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 
-/// 파일 내용을 출력하는 함수
-/// show_number가 true이면 라인 번호를 함께 출력
-fn print_file(path: &str, show_number: bool, line_counter: &mut usize) -> io::Result<()> {
-    // 파일 열기
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
+struct CatOptions {
+    show_number: bool,
+    number_nonblank: bool,
+    show_ends: bool,
+    show_tabs: bool,
+}
 
-    // 파일을 한 줄씩 읽어서 출력
+fn print_reader<R: BufRead>(reader: R, opts: &CatOptions, line_counter: &mut usize) -> io::Result<()> {
     for line in reader.lines() {
-        let line = line?;
-        if show_number {
-            // 라인 번호와 함께 출력 (6자리 포맷)
-            println!("{:6}\t{}", *line_counter, line);
-            *line_counter += 1;
-        } else {
-            // 라인 번호 없이 출력
-            println!("{}", line);
+        let mut line = line?;
+        if opts.show_tabs {
+            line = line.replace('\t', "^I");
         }
+
+        let mut prefix = String::new();
+        let is_blank = line.is_empty();
+        if opts.show_number {
+            if opts.number_nonblank {
+                if !is_blank {
+                    prefix = format!("{:6}\t", *line_counter);
+                    *line_counter += 1;
+                }
+            } else {
+                prefix = format!("{:6}\t", *line_counter);
+                *line_counter += 1;
+            }
+        }
+
+        if opts.show_ends {
+            line.push('$');
+        }
+
+        println!("{}{}", prefix, line);
     }
     Ok(())
 }
 
+fn process_file(path: &str, opts: &CatOptions, line_counter: &mut usize) -> io::Result<()> {
+    if path == "-" {
+        let stdin = io::stdin();
+        let reader = stdin.lock();
+        print_reader(reader, opts, line_counter)
+    } else {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        print_reader(reader, opts, line_counter)
+    }
+}
+
 fn main() -> io::Result<()> {
-    // 커맨드 라인 인자 수집
     let args: Vec<String> = env::args().collect();
 
-    // 인자가 부족한 경우 사용법 출력
-    if args.len() < 2 {
-        eprintln!("Usage: rcat [-n] <file>...");
-        std::process::exit(1);
-    }
+    let mut opts = CatOptions {
+        show_number: false,
+        number_nonblank: false,
+        show_ends: false,
+        show_tabs: false,
+    };
+    let mut files: Vec<String> = Vec::new();
+    let mut parsing_flags = true;
 
-    // 옵션과 파일 목록 분리
-    let mut show_number = false;
-    let mut files = Vec::new();
-
-    // 인자 파싱
     for arg in &args[1..] {
-        if arg == "-n" {
-            show_number = true; // 라인 번호 표시 옵션
+        if parsing_flags && arg == "--" {
+            parsing_flags = false;
+            continue;
+        }
+
+        if parsing_flags && arg.starts_with('-') && arg != "-" {
+            for ch in arg.chars().skip(1) {
+                match ch {
+                    'n' => opts.show_number = true,
+                    'b' => {
+                        opts.number_nonblank = true;
+                        opts.show_number = true;
+                    }
+                    'E' => opts.show_ends = true,
+                    'T' => opts.show_tabs = true,
+                    _ => {
+                        eprintln!("rcat: invalid option -- {}", ch);
+                        eprintln!("Usage: rcat [-b] [-E] [-n] [-T] [file ...]");
+                        std::process::exit(1);
+                    }
+                }
+            }
         } else {
-            files.push(arg); // 파일 목록에 추가
+            parsing_flags = false;
+            files.push(arg.clone());
         }
     }
 
-    // 파일이 지정되지 않은 경우
     if files.is_empty() {
-        eprintln!("No files provided.");
-        std::process::exit(1);
+        files.push("-".to_string());
     }
 
-    // 라인 카운터 초기화
     let mut line_counter = 1;
 
-    // 각 파일을 순서대로 처리
     for file in files {
-        if let Err(e) = print_file(file, show_number, &mut line_counter) {
-            // 파일 처리 중 오류 발생 시 에러 메시지 출력
+        if let Err(e) = process_file(&file, &opts, &mut line_counter) {
             eprintln!("rcat: {}: {}", file, e);
         }
     }
 
-    // 출력 버퍼 비우기
     io::stdout().flush()?;
     Ok(())
 }
