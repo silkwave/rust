@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자 목록</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>👥 사용자 목록</h1>
+        <nav>
+            <a href="/">홈</a> |
+            <a href="/users">사용자 목록</a> |
+            <a href="/users/new">사용자 생성</a>
+        </nav>
+    </header>
+    
+    <main>
+        <div class="actions">
+            <a href="/users/new" class="btn btn-primary">새 사용자 생성</a>
+        </div>
+        
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>이름</th>
+                    <th>이메일</th>
+                    <th>생성일</th>
+                    <th>작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        <a href="/users/{{ user.id }}" class="btn btn-small">상세</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+    
+    <footer>
+        <p>&copy; 2024 Rust 전자상거래 시스템</p>
+    </footer>
+    
+    <script src="/js/app.js"></script>
+</body>
+</html>
