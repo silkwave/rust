@@ -8,7 +8,7 @@ mod service;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::Json,
+    response::{Html, Json},
     routing::{delete, get, post, put},
     Router,
 };
@@ -128,6 +128,13 @@ async fn delete_board(Path(id): Path<i64>, State(state): State<AppState>) -> Res
     Ok(StatusCode::OK)
 }
 
+async fn serve_index() -> Result<Html<String>, StatusCode> {
+    tokio::fs::read_to_string("static/index.html")
+        .await
+        .map(Html)
+        .map_err(|_| StatusCode::NOT_FOUND)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::from_env();
@@ -150,6 +157,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState { controller };
 
     let app = Router::new()
+        .route("/", get(serve_index))
+        .route("/index.html", get(serve_index))
         .route("/boards", get(list_boards))
         .route("/boards", post(create_board))
         .route("/boards/{id}", get(get_board))
@@ -162,7 +171,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Server listening on http://{}", addr);
 
-    axum::serve(listener, app).await?;
+    tokio::select! {
+        _ = async {
+            axum::serve(listener, app).await.ok();
+        } => {}
+        _ = tokio::signal::ctrl_c() => {
+            info!("Shutting down server...");
+        }
+    }
 
     Ok(())
 }
