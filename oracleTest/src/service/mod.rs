@@ -28,29 +28,40 @@ impl BoardService {
     }
 
     pub async fn get_all_boards(&self) -> Result<Vec<Board>, ServiceError> {
-        info!("[Service] 전체 게시글 조회");
+        info!("[Service] get_all_boards 호출됨");
         let boards = self.repository.find_all().await?;
-        debug!("[Service] 조회된 게시글 수: {}", boards.len());
+        debug!("[Service] get_all_boards 반환: {}개의 게시글", boards.len());
         Ok(boards)
     }
 
     pub async fn get_board(&self, id: i64) -> Result<Board, ServiceError> {
-        info!("[Service] 게시글 조회 id={}", id);
+        info!("[Service] get_board 호출됨, id={}", id);
         if id <= 0 {
             warn!("[Service] 유효하지 않은 ID: {}", id);
             return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
         }
+        debug!("[Service] ID 유효성 검사 통과: {}", id);
         let board = self.repository.find_by_id(id).await?;
-        board.ok_or(ServiceError::NotFound)
+        match board {
+            Some(b) => {
+                debug!("[Service] get_board 반환: 게시글 id={} 찾음", id);
+                Ok(b)
+            }
+            None => {
+                debug!("[Service] get_board 반환: 게시글 id={} 없음 (NotFound)", id);
+                Err(ServiceError::NotFound)
+            }
+        }
     }
 
     pub async fn create_board(&self, title: &str, content: &str) -> Result<i64, ServiceError> {
-        info!("[Service] 게시글 생성 title={}", title);
+        info!("[Service] create_board 호출됨, title={}", title);
         self.validate_title(title)?;
         self.validate_content(content)?;
+        debug!("[Service] 제목 및 내용 유효성 검사 통과");
 
         let id = self.repository.insert(title, content).await?;
-        info!("[Service] 게시글 생성 완료 id={}", id);
+        info!("[Service] create_board 반환: 게시글 생성 완료 id={}", id);
         Ok(id)
     }
 
@@ -60,45 +71,51 @@ impl BoardService {
         title: &str,
         content: &str,
     ) -> Result<bool, ServiceError> {
-        info!("[Service] 게시글 수정 id={}, title={}", id, title);
+        info!("[Service] update_board 호출됨, id={}, title={}", id, title);
         if id <= 0 {
             warn!("[Service] 유효하지 않은 ID: {}", id);
             return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
         }
         self.validate_title(title)?;
         self.validate_content(content)?;
+        debug!("[Service] ID, 제목, 내용 유효성 검사 통과");
 
         let updated = self.repository.update(id, title, content).await?;
         if !updated {
             warn!("[Service] 수정할 게시글 없음 id={}", id);
+            debug!("[Service] update_board 반환: 게시글 id={} 수정 실패 (NotFound)", id);
             return Err(ServiceError::NotFound);
         }
-        info!("[Service] 게시글 수정 완료 id={}", id);
+        info!("[Service] update_board 반환: 게시글 수정 완료 id={}", id);
         Ok(true)
     }
 
     pub async fn delete_board(&self, id: i64) -> Result<bool, ServiceError> {
-        info!("[Service] 게시글 삭제 id={}", id);
+        info!("[Service] delete_board 호출됨, id={}", id);
         if id <= 0 {
             warn!("[Service] 유효하지 않은 ID: {}", id);
             return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
         }
+        debug!("[Service] ID 유효성 검사 통과: {}", id);
         let deleted = self.repository.delete(id).await?;
         if !deleted {
             warn!("[Service] 삭제할 게시글 없음 id={}", id);
+            debug!("[Service] delete_board 반환: 게시글 id={} 삭제 실패 (NotFound)", id);
             return Err(ServiceError::NotFound);
         }
-        info!("[Service] 게시글 삭제 완료 id={}", id);
+        info!("[Service] delete_board 반환: 게시글 삭제 완료 id={}", id);
         Ok(true)
     }
 
     fn validate_title(&self, title: &str) -> Result<(), ServiceError> {
         if title.trim().is_empty() {
+            debug!("[Service] 제목 유효성 검사 실패: 빈 제목");
             return Err(ServiceError::InvalidInput(
                 "제목은 필수입니다".to_string(),
             ));
         }
         if title.len() > 200 {
+            debug!("[Service] 제목 유효성 검사 실패: 너무 김 ({}자)", title.len());
             return Err(ServiceError::InvalidInput(
                 "제목이 너무 길습니다 (최대 200자)".to_string(),
             ));
@@ -108,6 +125,7 @@ impl BoardService {
 
     fn validate_content(&self, content: &str) -> Result<(), ServiceError> {
         if content.trim().is_empty() {
+            debug!("[Service] 내용 유효성 검사 실패: 빈 내용");
             return Err(ServiceError::InvalidInput(
                 "내용은 필수입니다".to_string(),
             ));

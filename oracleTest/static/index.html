@@ -261,6 +261,7 @@
 
         // Show/Hide Error
         function showError(message) {
+            console.error('[UI] 오류 발생:', message);
             errorMessage.textContent = message;
             errorMessage.classList.remove('hidden');
         }
@@ -271,13 +272,16 @@
 
         // Fetch all boards
         async function fetchBoards() {
+            console.log('[API] 게시글 목록을 불러옵니다.');
             try {
                 hideError();
                 const response = await fetch(API_BASE);
                 if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다');
                 const boards = await response.json();
+                console.log('[API] 게시글 목록을 성공적으로 불러왔습니다:', boards);
                 renderBoards(boards);
             } catch (error) {
+                console.error('[API] 게시글 목록 불러오기 실패:', error.message);
                 showError(error.message);
                 boardsList.innerHTML = '<div class="empty-state">게시글을 불러오는데 실패했습니다</div>';
             }
@@ -320,6 +324,8 @@
             const title = document.getElementById('title').value;
             const content = document.getElementById('content').value;
 
+            console.log('[API] 새 게시글 작성을 시도합니다:', { title, content });
+
             try {
                 const response = await fetch(API_BASE, {
                     method: 'POST',
@@ -332,9 +338,11 @@
                     throw new Error(error.message || '게시글 작성에 실패했습니다');
                 }
 
+                console.log('[API] 게시글 작성을 성공했습니다.');
                 createForm.reset();
                 await fetchBoards();
             } catch (error) {
+                console.error('[API] 게시글 작성 실패:', error.message);
                 showError(error.message);
             }
         });
@@ -344,25 +352,30 @@
             if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
 
             hideError();
+            console.log(`[API] 게시글 ID: ${id} 삭제를 시도합니다.`);
             try {
                 const response = await fetch(`${API_BASE}/${id}`, {
                     method: 'DELETE'
                 });
 
                 if (!response.ok) throw new Error('게시글 삭제에 실패했습니다');
+                console.log(`[API] 게시글 ID: ${id} 삭제를 성공했습니다.`);
                 await fetchBoards();
             } catch (error) {
+                console.error(`[API] 게시글 ID: ${id} 삭제 실패:`, error.message);
                 showError(error.message);
             }
         }
 
         // Edit board
         function editBoard(id, title, content) {
+            console.log(`[UI] 게시글 ID: ${id} 수정을 위한 폼을 엽니다.`);
             const card = document.querySelector(`.board-card[data-id="${id}"]`);
             const existingEditForm = card.querySelector('#editForm');
             
             if (existingEditForm) {
                 existingEditForm.remove();
+                console.log('[UI] 기존 수정 폼을 닫습니다.');
                 return;
             }
 
@@ -395,6 +408,8 @@
             const title = document.getElementById('editTitle').value;
             const content = document.getElementById('editContent').value;
 
+            console.log(`[API] 게시글 ID: ${id} 수정을 시도합니다:`, { title, content });
+
             try {
                 const response = await fetch(`${API_BASE}/${id}`, {
                     method: 'PUT',
@@ -403,13 +418,16 @@
                 });
 
                 if (!response.ok) throw new Error('게시글 수정에 실패했습니다');
+                console.log(`[API] 게시글 ID: ${id} 수정을 성공했습니다.`);
                 await fetchBoards();
             } catch (error) {
+                console.error(`[API] 게시글 ID: ${id} 수정 실패:`, error.message);
                 showError(error.message);
             }
         }
 
         // Initialize
+        console.log('[UI] 애플리케이션을 초기화하고 게시글을 불러옵니다.');
         fetchBoards();
     </script>
 </body>
