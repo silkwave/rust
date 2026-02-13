@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Board Application</title>
+    <title>게시판</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -225,29 +225,29 @@
 <body>
     <div class="container">
         <header>
-            <h1>📋 Board</h1>
-            <p class="subtitle">CRUD Operations</p>
+            <h1>📋 게시판</h1>
+            <p class="subtitle">CRUD operations</p>
         </header>
 
         <div id="errorMessage" class="error hidden"></div>
 
         <div class="form-card">
-            <h2 style="margin-bottom: 1rem;">Create New Post</h2>
+            <h2 style="margin-bottom: 1rem;">새 글 작성</h2>
             <form id="createForm">
                 <div class="form-group">
-                    <label for="title">Title</label>
-                    <input type="text" id="title" name="title" required placeholder="Enter title...">
+                    <label for="title">제목</label>
+                    <input type="text" id="title" name="title" required placeholder="제목을 입력하세요...">
                 </div>
                 <div class="form-group">
-                    <label for="content">Content</label>
-                    <textarea id="content" name="content" required placeholder="Enter content..."></textarea>
+                    <label for="content">내용</label>
+                    <textarea id="content" name="content" required placeholder="내용을 입력하세요..."></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary">Create</button>
+                <button type="submit" class="btn btn-primary">작성</button>
             </form>
         </div>
 
         <div class="boards-list" id="boardsList">
-            <div class="loading">Loading...</div>
+            <div class="loading">로딩 중...</div>
         </div>
     </div>
 
@@ -274,19 +274,19 @@
             try {
                 hideError();
                 const response = await fetch(API_BASE);
-                if (!response.ok) throw new Error('Failed to fetch boards');
+                if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다');
                 const boards = await response.json();
                 renderBoards(boards);
             } catch (error) {
                 showError(error.message);
-                boardsList.innerHTML = '<div class="empty-state">Failed to load boards</div>';
+                boardsList.innerHTML = '<div class="empty-state">게시글을 불러오는데 실패했습니다</div>';
             }
         }
 
         // Render boards
         function renderBoards(boards) {
             if (boards.length === 0) {
-                boardsList.innerHTML = '<div class="empty-state">No posts yet. Create one above!</div>';
+                boardsList.innerHTML = '<div class="empty-state">게시글이 없습니다. 첫 번째 글을 작성해보세요!</div>';
                 return;
             }
 
@@ -295,12 +295,12 @@
                     <div class="board-header">
                         <h3 class="board-title">${escapeHtml(board.title)}</h3>
                         <div class="board-actions">
-                            <button class="btn btn-edit" onclick="editBoard(${board.id}, '${escapeHtml(board.title)}', '${escapeHtml(board.content).replace(/'/g, "\\'")}')">Edit</button>
-                            <button class="btn btn-danger" onclick="deleteBoard(${board.id})">Delete</button>
+                            <button class="btn btn-edit" onclick="editBoard(${board.id}, '${escapeHtml(board.title)}', '${escapeHtml(board.content).replace(/'/g, "\\'")}')">수정</button>
+                            <button class="btn btn-danger" onclick="deleteBoard(${board.id})">삭제</button>
                         </div>
                     </div>
                     <div class="board-content">${escapeHtml(board.content)}</div>
-                    ${board.created_at ? `<div class="board-meta">Created: ${new Date(board.created_at).toLocaleString()}</div>` : ''}
+                    ${board.created_at ? `<div class="board-meta">작성일: ${new Date(board.created_at).toLocaleString()}</div>` : ''}
                 </div>
             `).join('');
         }
@@ -329,7 +329,7 @@
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.message || 'Failed to create board');
+                    throw new Error(error.message || '게시글 작성에 실패했습니다');
                 }
 
                 createForm.reset();
@@ -341,7 +341,7 @@
 
         // Delete board
         async function deleteBoard(id) {
-            if (!confirm('Are you sure you want to delete this post?')) return;
+            if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
 
             hideError();
             try {
@@ -349,7 +349,7 @@
                     method: 'DELETE'
                 });
 
-                if (!response.ok) throw new Error('Failed to delete board');
+                if (!response.ok) throw new Error('게시글 삭제에 실패했습니다');
                 await fetchBoards();
             } catch (error) {
                 showError(error.message);
@@ -369,18 +369,18 @@
             const editForm = document.createElement('div');
             editForm.id = 'editForm';
             editForm.innerHTML = `
-                <h3 style="margin-bottom: 1rem;">Edit Post</h3>
+                <h3 style="margin-bottom: 1rem;">글 수정</h3>
                 <form onsubmit="submitEdit(event, ${id})">
                     <div class="form-group">
-                        <label>Title</label>
+                        <label>제목</label>
                         <input type="text" id="editTitle" value="${escapeHtml(title)}" required>
                     </div>
                     <div class="form-group">
-                        <label>Content</label>
+                        <label>내용</label>
                         <textarea id="editContent" required>${escapeHtml(content)}</textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                    <button type="button" class="btn btn-edit" onclick="this.closest('#editForm').remove()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                    <button type="button" class="btn btn-edit" onclick="this.closest('#editForm').remove()">취소</button>
                 </form>
             `;
             
@@ -402,7 +402,7 @@
                     body: JSON.stringify({ title, content })
                 });
 
-                if (!response.ok) throw new Error('Failed to update board');
+                if (!response.ok) throw new Error('게시글 수정에 실패했습니다');
                 await fetchBoards();
             } catch (error) {
                 showError(error.message);

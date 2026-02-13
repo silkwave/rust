@@ -50,7 +50,7 @@ struct UpdateBoardRequest {
 
 async fn list_boards(State(state): State<AppState>) -> Result<Json<Vec<BoardResponse>>, StatusCode> {
     let boards = state.controller.list_boards_internal().await.map_err(|e| {
-        error!("Failed to list boards: {:?}", e);
+        error!("게시글 목록 조회 실패: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     let response: Vec<BoardResponse> = boards
@@ -70,7 +70,7 @@ async fn get_board(
     State(state): State<AppState>,
 ) -> Result<Json<BoardResponse>, StatusCode> {
     let board = state.controller.get_board_internal(id).await.map_err(|e| {
-        error!("Failed to get board: {:?}", e);
+        error!("게시글 조회 실패: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     match board {
@@ -93,7 +93,7 @@ async fn create_board(
         .create_board_internal(&req.title, &req.content)
         .await
         .map_err(|e| {
-            error!("Failed to create board: {:?}", e);
+            error!("게시글 생성 실패: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     Ok(Json(BoardResponse {
@@ -114,7 +114,7 @@ async fn update_board(
         .update_board_internal(id, &req.title, &req.content)
         .await
         .map_err(|e| {
-            error!("Failed to update board: {:?}", e);
+            error!("게시글 수정 실패: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     Ok(StatusCode::OK)
@@ -122,7 +122,7 @@ async fn update_board(
 
 async fn delete_board(Path(id): Path<i64>, State(state): State<AppState>) -> Result<StatusCode, StatusCode> {
     state.controller.delete_board_internal(id).await.map_err(|e| {
-        error!("Failed to delete board: {:?}", e);
+        error!("게시글 삭제 실패: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     Ok(StatusCode::OK)
@@ -144,8 +144,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(fmt::layer())
         .init();
 
-    info!("Starting Oracle MVC Board Application");
-    info!("Server config: {}:{}", config.server_host, config.server_port);
+    info!("Oracle MVC Board Application 시작");
+    info!("서버 설정: {}:{}", config.server_host, config.server_port);
 
     let conn = create_connection(&config.db_user, &config.db_password, &config.db_connect)?;
     let pool = create_pool(conn);
@@ -169,14 +169,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = format!("{}:{}", config.server_host, config.server_port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    info!("Server listening on http://{}", addr);
+    info!("서버 시작: http://{}", addr);
 
     tokio::select! {
         _ = async {
             axum::serve(listener, app).await.ok();
         } => {}
         _ = tokio::signal::ctrl_c() => {
-            info!("Shutting down server...");
+            info!("서버 종료 중...");
         }
     }
 
