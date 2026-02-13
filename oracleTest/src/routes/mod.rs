@@ -21,9 +21,9 @@ pub fn api_routes() -> Router<AppState> {
         .route("/", get(serve_index))
         .route("/index.html", get(serve_index))
         // 게시판 CRUD 엔드포인트
-        .route("/boards", get(list_boards))         // 목록 조회
-        .route("/boards", post(create_board))       // 생성
-        .route("/boards/:id", get(get_board))       // 상세 조회
-        .route("/boards/:id", put(update_board))    // 수정
+        .route("/boards", get(list_boards)) // 목록 조회
+        .route("/boards", post(create_board)) // 생성
+        .route("/boards/:id", get(get_board)) // 상세 조회
+        .route("/boards/:id", put(update_board)) // 수정
         .route("/boards/:id", delete(delete_board)) // 삭제
 }
