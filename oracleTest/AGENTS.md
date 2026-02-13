@@ -104,17 +104,26 @@ cargo tree
 - One module per file, use `mod module_name;` to include
 - Use `pub mod` for public modules
 - Keep related functionality together
-- SQL queries in `src/sql/*.sql` loaded via `include_str!()`
+- SQL queries in `src/sql/*.sql` loaded via `include_str!()` in `queries.rs`
+- Follow MVC pattern: model → repository → service → controller
 
 ## Current Code Structure
 
 ```
 oracleTest/
-├── Cargo.toml          # Project manifest
+├── Cargo.toml              # Project manifest
 ├── src/
-│   ├── main.rs         # Entry point with Oracle DB operations
-│   ├── queries.rs      # SQL query constants
-│   └── sql/            # SQL files
+│   ├── main.rs             # Entry point with async runtime
+│   ├── queries.rs          # SQL query constants (include_str!)
+│   ├── model/
+│   │   └── mod.rs          # Board struct, DbPool, create_pool
+│   ├── repository/
+│   │   └── mod.rs          # BoardRepository (CRUD operations)
+│   ├── service/
+│   │   └── mod.rs          # BoardService (business logic, validation)
+│   ├── controller/
+│   │   └── mod.rs          # BoardController (request handling)
+│   └── sql/                # SQL files loaded via include_str!
 │       ├── select_board.sql
 │       ├── insert_board.sql
 │       ├── update_board.sql

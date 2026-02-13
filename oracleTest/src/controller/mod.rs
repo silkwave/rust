@@ -3,6 +3,7 @@
 use crate::model::Board;
 use crate::service::{BoardService, ServiceError};
 use std::sync::Arc;
+use tracing::{error, info};
 
 pub struct BoardController {
     service: Arc<BoardService>,
@@ -14,6 +15,7 @@ impl BoardController {
     }
 
     pub async fn list_boards(&self) {
+        info!("Controller: Listing all boards");
         match self.service.get_all_boards().await {
             Ok(boards) => {
                 println!("\n=== Board List ({} items) ===", boards.len());
@@ -26,6 +28,7 @@ impl BoardController {
     }
 
     pub async fn get_board(&self, id: i64) {
+        info!("Controller: Getting board id={}", id);
         match self.service.get_board(id).await {
             Ok(board) => {
                 println!("\n=== Board Detail ===");
@@ -36,6 +39,7 @@ impl BoardController {
     }
 
     pub async fn create_board(&self, title: &str, content: &str) {
+        info!("Controller: Creating board title={}", title);
         match self.service.create_board(title, content).await {
             Ok(id) => println!("\nCreated board with ID: {}", id),
             Err(e) => self.print_error(&e),
@@ -43,6 +47,7 @@ impl BoardController {
     }
 
     pub async fn update_board(&self, id: i64, title: &str, content: &str) {
+        info!("Controller: Updating board id={}", id);
         match self.service.update_board(id, title, content).await {
             Ok(_) => println!("\nUpdated board ID: {}", id),
             Err(e) => self.print_error(&e),
@@ -50,6 +55,7 @@ impl BoardController {
     }
 
     pub async fn delete_board(&self, id: i64) {
+        info!("Controller: Deleting board id={}", id);
         match self.service.delete_board(id).await {
             Ok(_) => println!("\nDeleted board ID: {}", id),
             Err(e) => self.print_error(&e),
@@ -67,6 +73,7 @@ impl BoardController {
     }
 
     fn print_error(&self, err: &ServiceError) {
+        error!("Controller: Error occurred - {:?}", err);
         println!("\nError: {:?}", err);
     }
 }
