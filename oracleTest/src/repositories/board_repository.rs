@@ -5,6 +5,7 @@ use crate::models::board::{Board, DbPool};
 use oracle::{ErrorKind, Row}; // ErrorKind 추가
 use tracing::{debug, error, info, warn};
 
+/// 게시판 데이터베이스 접근 객체 (DAO)
 pub struct BoardRepository {
     pool: DbPool,
 }
@@ -14,6 +15,7 @@ impl BoardRepository {
         Self { pool }
     }
 
+    /// 모든 게시글 조회 (SELECT)
     pub async fn find_all(&self) -> Result<Vec<Board>, oracle::Error> {
         info!("[Repository] find_all 호출됨");
         let conn = self.pool.conn.lock().await;
@@ -29,6 +31,7 @@ impl BoardRepository {
         Ok(boards)
     }
 
+    /// ID로 게시글 조회 (SELECT WHERE ID = ?)
     pub async fn find_by_id(&self, id: i64) -> Result<Option<Board>, oracle::Error> {
         info!("[Repository] find_by_id 호출됨, id={}", id);
         let conn = self.pool.conn.lock().await;
@@ -46,6 +49,7 @@ impl BoardRepository {
         }
     }
 
+    /// 게시글 추가 (INSERT) 및 생성된 ID 반환
     pub async fn insert(&self, title: &str, content: &str) -> Result<i64, oracle::Error> {
         info!("[Repository] insert 호출됨, title={}", title);
         let conn = self.pool.conn.lock().await;
@@ -71,6 +75,7 @@ impl BoardRepository {
         }
     }
 
+    /// 게시글 수정 (UPDATE)
     pub async fn update(&self, id: i64, title: &str, content: &str) -> Result<bool, oracle::Error> {
         info!("[Repository] update 호출됨, id={}, title={}", id, title);
         let conn = self.pool.conn.lock().await;
@@ -107,6 +112,7 @@ impl BoardRepository {
         }
     }
 
+    /// 게시글 삭제 (DELETE)
     pub async fn delete(&self, id: i64) -> Result<bool, oracle::Error> {
         info!("[Repository] delete 호출됨, id={}", id);
         let conn = self.pool.conn.lock().await;
@@ -125,6 +131,7 @@ impl BoardRepository {
         }
     }
 
+    /// DB Row를 Board 구조체로 변환하는 헬퍼 함수
     fn row_to_board(&self, row: Row) -> Result<Board, oracle::Error> {
         let id: i64 = row.get("ID")?;
         let title: Option<String> = row.get("TITLE")?;

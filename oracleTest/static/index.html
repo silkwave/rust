@@ -254,12 +254,12 @@
     <script>
         const API_BASE = '/boards';
 
-        // DOM Elements
+        // DOM 요소 참조
         const createForm = document.getElementById('createForm');
         const boardsList = document.getElementById('boardsList');
         const errorMessage = document.getElementById('errorMessage');
 
-        // Show/Hide Error
+        // 에러 메시지 표시/숨김 처리
         function showError(message) {
             console.error('[UI] 오류 발생:', message);
             errorMessage.textContent = message;
@@ -270,7 +270,7 @@
             errorMessage.classList.add('hidden');
         }
 
-        // Fetch all boards
+        // 모든 게시글 조회 (API 호출)
         async function fetchBoards() {
             console.log('[API] 게시글 목록을 불러옵니다.');
             try {
@@ -287,7 +287,7 @@
             }
         }
 
-        // Render boards
+        // 게시글 목록 렌더링 (HTML 생성)
         function renderBoards(boards) {
             if (boards.length === 0) {
                 boardsList.innerHTML = '<div class="empty-state">게시글이 없습니다. 첫 번째 글을 작성해보세요!</div>';
@@ -309,14 +309,14 @@
             `).join('');
         }
 
-        // Escape HTML to prevent XSS
+        // XSS 방지를 위한 HTML 이스케이프 처리
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
 
-        // Create board
+        // 게시글 생성 처리 (이벤트 리스너)
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             hideError();
@@ -347,7 +347,7 @@
             }
         });
 
-        // Delete board
+        // 게시글 삭제 처리
         async function deleteBoard(id) {
             if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
 
@@ -367,7 +367,7 @@
             }
         }
 
-        // Edit board
+        // 게시글 수정 폼 표시 (UI 변경)
         function editBoard(id, title, content) {
             console.log(`[UI] 게시글 ID: ${id} 수정을 위한 폼을 엽니다.`);
             const card = document.querySelector(`.board-card[data-id="${id}"]`);
@@ -400,7 +400,7 @@
             card.appendChild(editForm);
         }
 
-        // Submit edit
+        // 게시글 수정 요청 전송 (API 호출)
         async function submitEdit(event, id) {
             event.preventDefault();
             hideError();
@@ -426,7 +426,7 @@
             }
         }
 
-        // Initialize
+        // 초기화: 페이지 로드 시 게시글 목록 조회
         console.log('[UI] 애플리케이션을 초기화하고 게시글을 불러옵니다.');
         fetchBoards();
     </script>

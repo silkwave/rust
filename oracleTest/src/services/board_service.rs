@@ -5,10 +5,12 @@ use crate::repositories::board_repository::BoardRepository;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
+/// 게시판 비즈니스 로직을 담당하는 서비스 구조체
 pub struct BoardService {
     repository: Arc<BoardRepository>,
 }
 
+/// 서비스 계층에서 발생할 수 있는 에러 정의
 #[derive(Debug)]
 #[allow(dead_code)] // Debug 트레이트 구현 시 필드가 '사용되지 않는 코드'로 경고 발생 방지
 pub enum ServiceError {
@@ -24,10 +26,12 @@ impl From<oracle::Error> for ServiceError {
 }
 
 impl BoardService {
+    /// 서비스 생성자: Repository 의존성 주입
     pub fn new(repository: Arc<BoardRepository>) -> Self {
         Self { repository }
     }
 
+    /// 모든 게시글 조회 로직
     pub async fn get_all_boards(&self) -> Result<Vec<Board>, ServiceError> {
         info!("[Service] get_all_boards 호출됨");
         let boards = self.repository.find_all().await?;
@@ -35,6 +39,7 @@ impl BoardService {
         Ok(boards)
     }
 
+    /// 특정 게시글 조회 로직 (ID 유효성 검사 포함)
     pub async fn get_board(&self, id: i64) -> Result<Board, ServiceError> {
         info!("[Service] get_board 호출됨, id={}", id);
         if id <= 0 {
@@ -55,6 +60,7 @@ impl BoardService {
         }
     }
 
+    /// 게시글 생성 로직 (제목/내용 유효성 검사 포함)
     pub async fn create_board(&self, title: &str, content: &str) -> Result<i64, ServiceError> {
         info!("[Service] create_board 호출됨, title={}", title);
         self.validate_title(title)?;
@@ -66,6 +72,7 @@ impl BoardService {
         Ok(id)
     }
 
+    /// 게시글 수정 로직
     pub async fn update_board(
         &self,
         id: i64,
@@ -94,6 +101,7 @@ impl BoardService {
         Ok(true)
     }
 
+    /// 게시글 삭제 로직
     pub async fn delete_board(&self, id: i64) -> Result<bool, ServiceError> {
         info!("[Service] delete_board 호출됨, id={}", id);
         if id <= 0 {
@@ -114,6 +122,7 @@ impl BoardService {
         Ok(true)
     }
 
+    /// 제목 유효성 검사: 비어있거나 너무 긴 경우 에러
     fn validate_title(&self, title: &str) -> Result<(), ServiceError> {
         if title.trim().is_empty() {
             debug!("[Service] 제목 유효성 검사 실패: 빈 제목");
@@ -131,6 +140,7 @@ impl BoardService {
         Ok(())
     }
 
+    /// 내용 유효성 검사: 비어있는 경우 에러
     fn validate_content(&self, content: &str) -> Result<(), ServiceError> {
         if content.trim().is_empty() {
             debug!("[Service] 내용 유효성 검사 실패: 빈 내용");

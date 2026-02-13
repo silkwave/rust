@@ -27,10 +27,12 @@ impl Board {
 
 /// 데이터베이스 연결을 관리하는 구조체
 pub struct DbConnection {
+    /// Oracle 연결 객체 (스레드 안전을 위해 Mutex로 감쌈)
     pub conn: Mutex<Connection>,
 }
 
 impl DbConnection {
+    /// 새로운 DbConnection 인스턴스 생성
     pub fn new(conn: Connection) -> Self {
         Self {
             conn: Mutex::new(conn),
@@ -38,7 +40,7 @@ impl DbConnection {
     }
 }
 
-/// 스레드安全的인 DB 연결 타입
+/// 스레드 안전한 DB 연결 타입 (Arc로 공유)
 pub type DbPool = Arc<DbConnection>;
 
 /// DB 연결 풀 생성
@@ -46,6 +48,7 @@ pub fn create_pool(conn: Connection) -> DbPool {
     Arc::new(DbConnection::new(conn))
 }
 
+/// 데이터베이스 연결 생성 함수
 pub fn create_connection(
     user: &str,
     password: &str,

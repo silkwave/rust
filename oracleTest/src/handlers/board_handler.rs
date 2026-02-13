@@ -14,24 +14,31 @@ use crate::{
     services::board_service::{BoardService, ServiceError},
 };
 
+/// 게시판 컨트롤러: 비즈니스 로직(Service)과 HTTP 요청(Handler)을 연결하는 역할
 pub struct BoardController {
     service: Arc<BoardService>,
 }
 
+/// API 응답 모델: 클라이언트에게 반환되는 게시글 정보
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BoardResponse {
     pub id: i64,
     pub title: String,
     pub content: String,
+    /// 생성 일시 (문자열 포맷)
     pub created_at: Option<String>,
 }
 
+/// 게시글 생성 요청 모델
 #[derive(Debug, Deserialize)]
 pub struct CreateBoardRequest {
+    /// 게시글 제목
     pub title: String,
+    /// 게시글 내용
     pub content: String,
 }
 
+/// 게시글 수정 요청 모델
 #[derive(Debug, Deserialize)]
 pub struct UpdateBoardRequest {
     pub title: String,
@@ -40,16 +47,19 @@ pub struct UpdateBoardRequest {
 
 #[allow(dead_code)]
 impl BoardController {
+    /// 컨트롤러 생성자: Service 의존성 주입
     pub fn new(service: Arc<BoardService>) -> Self {
         Self { service }
     }
 
+    /// 내부 로직: 모든 게시글 조회
     pub async fn list_boards_internal(&self) -> Result<Vec<Board>, ServiceError> {
         info!("[Controller] list_boards_internal 호출됨");
         let boards = self.service.get_all_boards().await?;
         Ok(boards)
     }
 
+    /// 내부 로직: 특정 게시글 조회
     pub async fn get_board_internal(&self, id: i64) -> Result<Option<Board>, ServiceError> {
         info!("[Controller] get_board_internal 호출됨, id={}", id);
         let result = self.service.get_board(id).await;
@@ -61,6 +71,7 @@ impl BoardController {
         Ok(board)
     }
 
+    /// 내부 로직: 게시글 생성
     pub async fn create_board_internal(
         &self,
         title: &str,
@@ -71,6 +82,7 @@ impl BoardController {
         Ok(id)
     }
 
+    /// 내부 로직: 게시글 수정
     pub async fn update_board_internal(
         &self,
         id: i64,
@@ -82,6 +94,7 @@ impl BoardController {
         Ok(())
     }
 
+    /// 내부 로직: 게시글 삭제
     pub async fn delete_board_internal(&self, id: i64) -> Result<(), ServiceError> {
         info!("[Controller] delete_board_internal 호출됨, id={}", id);
         self.service.delete_board(id).await?;
@@ -89,6 +102,8 @@ impl BoardController {
     }
 }
 
+/// GET /boards
+/// 모든 게시글 목록을 조회하여 JSON으로 반환합니다.
 pub async fn list_boards(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<BoardResponse>>, StatusCode> {
@@ -108,6 +123,8 @@ pub async fn list_boards(
     Ok(Json(response))
 }
 
+/// GET /boards/:id
+/// 특정 ID의 게시글을 조회합니다. 존재하지 않으면 404를 반환합니다.
 pub async fn get_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -127,6 +144,8 @@ pub async fn get_board(
     }
 }
 
+/// POST /boards
+/// 새로운 게시글을 생성합니다.
 pub async fn create_board(
     State(state): State<AppState>,
     Json(req): Json<CreateBoardRequest>,
@@ -147,6 +166,8 @@ pub async fn create_board(
     }))
 }
 
+/// PUT /boards/:id
+/// 기존 게시글을 수정합니다.
 pub async fn update_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -166,6 +187,8 @@ pub async fn update_board(
     Ok(StatusCode::OK)
 }
 
+/// DELETE /boards/:id
+/// 특정 게시글을 삭제합니다.
 pub async fn delete_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
@@ -181,6 +204,8 @@ pub async fn delete_board(
     Ok(StatusCode::OK)
 }
 
+/// GET /
+/// 정적 HTML 파일을 서빙합니다.
 pub async fn serve_index() -> Result<Html<String>, StatusCode> {
     tokio::fs::read_to_string("static/index.html")
         .await
