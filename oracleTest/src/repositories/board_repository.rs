@@ -1,8 +1,8 @@
 //! Repository 계층: 데이터베이스 CRUD 작업
 
-use crate::model::{Board, DbPool};
-use crate::queries::{DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, UPDATE_BOARD};
-use oracle::{Connection, Connector, Row, ErrorKind}; // ErrorKind 추가
+use crate::common::queries::{DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, UPDATE_BOARD};
+use crate::models::board::{Board, DbPool};
+use oracle::{ErrorKind, Row}; // ErrorKind 추가
 use tracing::{debug, error, info, warn};
 
 pub struct BoardRepository {
@@ -50,7 +50,10 @@ impl BoardRepository {
         info!("[Repository] insert 호출됨, title={}", title);
         let conn = self.pool.conn.lock().await;
         let stmt = conn.execute(INSERT_BOARD, &[&title, &content])?;
-        debug!("[Repository] INSERT 쿼리 실행, 영향 받은 행: {}", stmt.row_count()?);
+        debug!(
+            "[Repository] INSERT 쿼리 실행, 영향 받은 행: {}",
+            stmt.row_count()?
+        );
         conn.commit()?;
 
         let sql = "SELECT BOARD_SEQ.CURRVAL FROM DUAL";
@@ -76,19 +79,30 @@ impl BoardRepository {
         let check_sql = "SELECT ID FROM BOARD WHERE ID = :1";
         let mut check_rows = conn.query(check_sql, &[&id])?;
         if check_rows.next().is_none() {
-            debug!("[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재하지 않음", id);
+            debug!(
+                "[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재하지 않음",
+                id
+            );
             return Ok(false); // 게시글이 존재하지 않으면 업데이트할 필요 없음
         }
-        debug!("[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재함", id);
+        debug!(
+            "[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재함",
+            id
+        );
 
-        let rows_affected = conn.execute(UPDATE_BOARD, &[&title, &content, &id])?.row_count()?;
+        let rows_affected = conn
+            .execute(UPDATE_BOARD, &[&title, &content, &id])?
+            .row_count()?;
         conn.commit()?;
         if rows_affected > 0 {
             debug!("[Repository] update 반환: 게시글 id={} 수정 완료", id);
             Ok(true)
         } else {
             warn!("[Repository] 수정할 게시글을 찾을 수 없음: id={}", id);
-            debug!("[Repository] update 반환: 게시글 id={} 수정 실패 (영향 받은 행 없음)", id);
+            debug!(
+                "[Repository] update 반환: 게시글 id={} 수정 실패 (영향 받은 행 없음)",
+                id
+            );
             Ok(false)
         }
     }
@@ -103,7 +117,10 @@ impl BoardRepository {
             Ok(true)
         } else {
             warn!("[Repository] 삭제할 게시글을 찾을 수 없음: id={}", id);
-            debug!("[Repository] delete 반환: 게시글 id={} 삭제 실패 (영향 받은 행 없음)", id);
+            debug!(
+                "[Repository] delete 반환: 게시글 id={} 삭제 실패 (영향 받은 행 없음)",
+                id
+            );
             Ok(false)
         }
     }
@@ -121,12 +138,4 @@ impl BoardRepository {
             created_at,
         })
     }
-}
-
-pub fn create_connection(
-    user: &str,
-    password: &str,
-    db: &str,
-) -> Result<Connection, oracle::Error> {
-    Connector::new(user, password, db).connect()
 }

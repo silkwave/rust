@@ -1,6 +1,6 @@
 //! Model 계층: 데이터 구조체 및 DB 연결 관리
 
-use oracle::Connection;
+use oracle::{Connection, Connector};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -14,6 +14,7 @@ pub struct Board {
 }
 
 impl Board {
+    #[allow(dead_code)]
     pub fn new(id: i64, title: String, content: String) -> Self {
         Self {
             id,
@@ -43,4 +44,12 @@ pub type DbPool = Arc<DbConnection>;
 /// DB 연결 풀 생성
 pub fn create_pool(conn: Connection) -> DbPool {
     Arc::new(DbConnection::new(conn))
+}
+
+pub fn create_connection(
+    user: &str,
+    password: &str,
+    db: &str,
+) -> Result<Connection, oracle::Error> {
+    Connector::new(user, password, db).connect()
 }
