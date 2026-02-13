@@ -62,6 +62,33 @@ impl BoardController {
         }
     }
 
+    pub async fn list_boards_internal(&self) -> Result<Vec<Board>, ServiceError> {
+        info!("Controller: Listing all boards (internal)");
+        self.service.get_all_boards().await
+    }
+
+    pub async fn get_board_internal(&self, id: i64) -> Result<Option<Board>, ServiceError> {
+        info!("Controller: Getting board id={} (internal)", id);
+        self.service.get_board(id).await.map(Some).or(Ok(None))
+    }
+
+    pub async fn create_board_internal(&self, title: &str, content: &str) -> Result<i64, ServiceError> {
+        info!("Controller: Creating board title={} (internal)", title);
+        self.service.create_board(title, content).await
+    }
+
+    pub async fn update_board_internal(&self, id: i64, title: &str, content: &str) -> Result<(), ServiceError> {
+        info!("Controller: Updating board id={} (internal)", id);
+        self.service.update_board(id, title, content).await?;
+        Ok(())
+    }
+
+    pub async fn delete_board_internal(&self, id: i64) -> Result<(), ServiceError> {
+        info!("Controller: Deleting board id={} (internal)", id);
+        self.service.delete_board(id).await?;
+        Ok(())
+    }
+
     fn print_board(&self, board: &Board) {
         println!("----------------------------------------");
         println!("ID:      {}", board.id);
