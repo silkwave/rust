@@ -1,5 +1,6 @@
 mod controller;
 mod model;
+mod queries;
 mod repository;
 mod service;
 

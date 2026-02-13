@@ -1,6 +1,7 @@
 //! Repository 계층: 데이터베이스 CRUD 작업
 
 use crate::model::{Board, DbPool};
+use crate::queries::{DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, UPDATE_BOARD};
 use oracle::{Connection, Connector, Row};
 
 pub struct BoardRepository {
@@ -14,8 +15,7 @@ impl BoardRepository {
 
     pub async fn find_all(&self) -> Result<Vec<Board>, oracle::Error> {
         let conn = self.pool.conn.lock().await;
-        let sql = "SELECT ID, TITLE, CONTENT, CREATED_AT FROM BOARD ORDER BY ID DESC";
-        let rows = conn.query(sql, &[])?;
+        let rows = conn.query(SELECT_BOARD, &[])?;
 
         let mut boards = Vec::new();
         for row_result in rows {
@@ -41,8 +41,7 @@ impl BoardRepository {
 
     pub async fn insert(&self, title: &str, content: &str) -> Result<i64, oracle::Error> {
         let conn = self.pool.conn.lock().await;
-        let sql = "INSERT INTO BOARD (ID, TITLE, CONTENT) VALUES (BOARD_SEQ.NEXTVAL, :1, :2)";
-        conn.execute(sql, &[&title, &content])?;
+        conn.execute(INSERT_BOARD, &[&title, &content])?;
         conn.commit()?;
 
         let sql = "SELECT BOARD_SEQ.CURRVAL FROM DUAL";
@@ -57,16 +56,14 @@ impl BoardRepository {
 
     pub async fn update(&self, id: i64, title: &str, content: &str) -> Result<bool, oracle::Error> {
         let conn = self.pool.conn.lock().await;
-        let sql = "UPDATE BOARD SET TITLE = :1, CONTENT = :2 WHERE ID = :3";
-        conn.execute(sql, &[&title, &content, &id])?;
+        conn.execute(UPDATE_BOARD, &[&title, &content, &id])?;
         conn.commit()?;
         Ok(true)
     }
 
     pub async fn delete(&self, id: i64) -> Result<bool, oracle::Error> {
         let conn = self.pool.conn.lock().await;
-        let sql = "DELETE FROM BOARD WHERE ID = :1";
-        conn.execute(sql, &[&id])?;
+        conn.execute(DELETE_BOARD, &[&id])?;
         conn.commit()?;
         Ok(true)
     }
