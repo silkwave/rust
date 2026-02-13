@@ -1,86 +1,68 @@
-# AGENTS.md - 에이전트 코딩 가이드라인
+# 프로젝트 지식 베이스
 
-이 문서는 이 저장소에서 작업하는 AI 에이전트를 위한 가이드라인입니다.
+**생성일:** 2026-02-13
+**커밋:** a88f8f3
 
-### 답변 
-한글로 답변 합니다. 
+## 개요
 
-### 주석 
-한글주석. 
+Rust Axum 기반 Oracle DB 게시판 REST API
 
-## 프로젝트 개요
+## 구조
 
-- **프로젝트 이름**: oracleTest
-- **언어**: Rust
-- **에디션**: 2024 (nightly/unstable)
-- **핵심 스택**: Axum (HTTP), Tokio (async), Oracle DB, Tracing (로깅)
+```
+./
+├── src/
+│   ├── main.rs           # 서버 진입점, 라우트 정의
+│   ├── config/mod.rs     # .env 설정 로드
+│   ├── model/mod.rs     # Board, DbPool 구조체
+│   ├── repository/mod.rs # DB CRUD operations
+│   ├── service/mod.rs   # 비즈니스 로직, 검증
+│   ├── controller/mod.rs # 요청 핸들러
+│   └── queries.rs       # SQL 상수
+├── static/index.html     # Vue 없는 바닐라 JS 프론트엔드
+├── Cargo.toml
+└── .env
+```
 
-## 빌드, 린트 및 테스트 명령어
+## 코드 맵
 
-### 표준 명령어
+| 심볼 | 유형 | 위치 | 역할 |
+|------|------|------|------|
+| AppState | Struct | main.rs:26 | controller 상태 보관 |
+| list_boards | Fn | main.rs:51 | GET /boards |
+| get_board | Fn | main.rs:68 | GET /boards/{id} |
+| create_board | Fn | main.rs:87 | POST /boards |
+| update_board | Fn | main.rs:107 | PUT /boards/{id} |
+| delete_board | Fn | main.rs:123 | DELETE /boards/{id} |
+| BoardService | Struct | service/mod.rs:8 | 비즈니스 로직 |
+| ServiceError | Enum | service/mod.rs:12 | 오류 유형 |
+| BoardRepository | Struct | repository/mod.rs:8 | DB 작업 |
+
+## 컨벤션
+
+- **답변:** 한글
+- **주석:** 한글
+- **명명:** snake_case (변수/함수), PascalCase (타입)
+- **로깅:** `[Layer] 메시지` 형식 (예: `[Controller]`, `[Service]`)
+
+## 금기 사항
+
+- 타입 오류 감싸기 (`as any`, `@ts-ignore`) - Rust에서는 불가
+- 빈 catch 블록
+- 테스트 없음
+
+## 명령어
+
 ```bash
 cargo build              # 빌드
 cargo build --release    # 릴리스
-cargo run                # 서버 실행
-```
-
-### 린트 & 포맷팅
-```bash
+cargo run                # 서버 실행 (Ctrl+C 지원)
 cargo fmt                # 포맷
-cargo fmt -- --check    # 포맷 확인
 cargo clippy             # 린트
-cargo clippy --fix      # 린트 자동 수정
 ```
 
-### 테스트
-```bash
-cargo test               # 테스트 실행
-cargo test name_here    # 단일 테스트
-cargo test -- --nocapture  # 출력 포함
-```
+## 참고
 
-## HTTP API 라우트
-
-| 메서드 | 엔드포인트 | 핸들러 |
-|--------|------------|---------|
-| GET | /boards | list_boards |
-| POST | /boards | create_board |
-| GET | /boards/{id} | get_board |
-| PUT | /boards/{id} | update_board |
-| DELETE | /boards/{id} | delete_board |
-
-## 코딩 스타일 가이드라인
-
-###命名
-- **변수/함수**: `snake_case`
-- **타입/열거형**: `PascalCase`
-- **상수**: `SCREAMING_SNAKE_CASE`
-- **파일**: `snake_case.rs`
-
-### 가져오기(Imports)
-- 그룹: std → external → internal
-- 내부 모듈은 `crate::` 사용
-
-### 모듈 구성
-```
-src/
-├── main.rs         # Axum 서버 진입점
-├── config/mod.rs   # 환경변수 설정
-├── model/mod.rs    # Board, DbPool
-├── repository/     # CRUD 작업
-├── service/        # 비즈니스 로직
-├── controller/     # 요청 핸들러
-├── queries.rs      # SQL 상수
-└── sql/            # *.sql 파일
-```
-
-### 오류 처리
-- `Result<T, E>`와 `?` 사용
-- 예시: `fn main() -> Result<(), Box<dyn std::error::Error>>`
-
-## 중요 참고사항
-
-1. **설정**: `dotenv`를 통해 `.env` 사용. `.env.example` 참조
-2. **DB**: Oracle `127.0.0.1:1521/ORCL` (개발 전용)
-3. **테스트**: 프로젝트에 테스트 없음 (0개)
-4. **SQL**: `src/sql/*.sql`, `include_str!()`로 로드
+- `.env` 파일 필요 (dotenv)
+- Oracle DB: `127.0.0.1:1521/ORCL`
+- 정적 파일: `/`, `/index.html` → `static/index.html`
