@@ -71,6 +71,16 @@ impl BoardRepository {
     pub async fn update(&self, id: i64, title: &str, content: &str) -> Result<bool, oracle::Error> {
         info!("[Repository] update 호출됨, id={}, title={}", id, title);
         let conn = self.pool.conn.lock().await;
+
+        // 업데이트 전 게시글 존재 여부 확인
+        let check_sql = "SELECT ID FROM BOARD WHERE ID = :1";
+        let mut check_rows = conn.query(check_sql, &[&id])?;
+        if check_rows.next().is_none() {
+            debug!("[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재하지 않음", id);
+            return Ok(false); // 게시글이 존재하지 않으면 업데이트할 필요 없음
+        }
+        debug!("[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재함", id);
+
         let rows_affected = conn.execute(UPDATE_BOARD, &[&title, &content, &id])?.row_count()?;
         conn.commit()?;
         if rows_affected > 0 {
