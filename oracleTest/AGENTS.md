@@ -7,143 +7,74 @@ This document provides guidelines for AI agents working in this repository.
 - **Project name**: oracleTest
 - **Language**: Rust
 - **Edition**: 2024 (nightly/unstable)
-- **Dependencies**: `oracle = "0.6.3"` (Oracle DB driver), `tokio` (async runtime)
+- **Core Stack**: Axum (HTTP), Tokio (async), Oracle DB, Tracing (logging)
 
 ## Build, Lint, and Test Commands
 
 ### Standard Commands
 ```bash
-# Build the project
-cargo build
-
-# Run in release mode
-cargo build --release
-
-# Run the application
-cargo run
+cargo build              # Build
+cargo build --release    # Release
+cargo run                # Run server
 ```
 
-### Linting
+### Linting & Formatting
 ```bash
-# Run clippy linter (recommended before committing)
-cargo clippy
-
-# Fix clippy suggestions automatically
-cargo clippy --fix
-
-# Check formatting (will show diffs if not formatted)
-cargo fmt -- --check
-
-# Auto-format code
-cargo fmt
+cargo fmt                # Format
+cargo fmt -- --check    # Check format
+cargo clippy             # Lint
+cargo clippy --fix      # Auto-fix lint
 ```
 
 ### Testing
 ```bash
-# Run all tests
-cargo test
-
-# Run a single test by name
-cargo test test_name_here
-
-# Run tests with output
-cargo test -- --nocapture
-
-# Run doc tests
-cargo test --doc
+cargo test               # Run tests
+cargo test name_here    # Single test
+cargo test -- --nocapture  # With output
 ```
 
-### Other Useful Commands
-```bash
-# Check for security vulnerabilities
-cargo audit
+## HTTP API Routes
 
-# Update dependencies
-cargo update
-
-# Show dependency tree
-cargo tree
-```
+| Method | Endpoint | Handler |
+|--------|----------|---------|
+| GET | /boards | list_boards |
+| POST | /boards | create_board |
+| GET | /boards/{id} | get_board |
+| PUT | /boards/{id} | update_board |
+| DELETE | /boards/{id} | delete_board |
 
 ## Code Style Guidelines
 
-### General Principles
-- Follow standard Rust idioms and conventions
-- Use `cargo fmt` for code formatting before committing
-- Run `cargo clippy` to catch common mistakes
-- Prefer explicit error handling over `unwrap()` (except in tests)
-
-### Naming Conventions
-- **Variables/functions**: `snake_case` (e.g., `let conn = ...`, `fn get_data()`)
-- **Types/enums**: `PascalCase` (e.g., `struct UserData`, `enum ResultType`)
-- **Constants**: `SCREAMING_SNAKE_CASE` (e.g., `const MAX_RETRIES: u32 = 3`)
-- **Files**: `snake_case.rs` (e.g., `queries.rs`, `user_service.rs`)
+### Naming
+- **Variables/functions**: `snake_case`
+- **Types/enums**: `PascalCase`
+- **Constants**: `SCREAMING_SNAKE_CASE`
+- **Files**: `snake_case.rs`
 
 ### Imports
-- Use absolute imports with `crate::` for internal modules
-- Group imports: standard library → external crates → internal modules
-- Prefer bringing specific items into scope: `use std::fs::File;` not `use std::fs::*;`
-
-### Error Handling
-- Use `Result<T, E>` for functions that can fail
-- Propagate errors with `?` operator
-- Return descriptive error types from libraries when possible
-- Example: `fn main() -> Result<(), oracle::Error>`
-
-### Types
-- Prefer explicit type annotations for public API functions
-- Use generics where appropriate for reusable code
-- Avoid `Any` type casts or unsafe code unless absolutely necessary
-
-### Documentation
-- Add doc comments (`///`) for public API functions
-- Document complex logic with inline comments
-- Explain *why* not *what* in comments
+- Group: std → external → internal
+- Use `crate::` for internal modules
 
 ### Module Organization
-- One module per file, use `mod module_name;` to include
-- Use `pub mod` for public modules
-- Keep related functionality together
-- SQL queries in `src/sql/*.sql` loaded via `include_str!()` in `queries.rs`
-- Follow MVC pattern: model → repository → service → controller
-
-## Current Code Structure
-
 ```
-oracleTest/
-├── Cargo.toml              # Project manifest
-├── src/
-│   ├── main.rs             # Entry point with async runtime
-│   ├── queries.rs          # SQL query constants (include_str!)
-│   ├── model/
-│   │   └── mod.rs          # Board struct, DbPool, create_pool
-│   ├── repository/
-│   │   └── mod.rs          # BoardRepository (CRUD operations)
-│   ├── service/
-│   │   └── mod.rs          # BoardService (business logic, validation)
-│   ├── controller/
-│   │   └── mod.rs          # BoardController (request handling)
-│   └── sql/                # SQL files loaded via include_str!
-│       ├── select_board.sql
-│       ├── insert_board.sql
-│       ├── update_board.sql
-│       └── delete_board.sql
+src/
+├── main.rs         # Axum server entry
+├── config/mod.rs   # Config from env
+├── model/mod.rs    # Board, DbPool
+├── repository/     # CRUD operations
+├── service/        # Business logic
+├── controller/     # Request handlers
+├── queries.rs      # SQL constants
+└── sql/            # *.sql files
 ```
+
+### Error Handling
+- Use `Result<T, E>` with `?`
+- Example: `fn main() -> Result<(), Box<dyn std::error::Error>>`
 
 ## Important Notes
 
-1. **Database Connection**: The code connects to Oracle DB at `127.0.0.1:1521/ORCL` with credentials `docker`/`docker123`. Do not hardcode credentials in production code.
-
-2. **No Tests Exist**: The project currently has 0 tests. Consider adding tests when modifying code.
-
-3. **Edition 2024**: This uses Rust edition 2024 (nightly). Some features may require nightly Rust.
-
-4. **Formatting**: Run `cargo fmt` before committing - current code does not match rustfmt defaults.
-
-## Testing Guidelines
-
-- Write unit tests in the same file using `#[cfg(test)]` modules
-- Integration tests go in `tests/` directory
-- Use descriptive test names: `#[test] fn test_insert_returns_correct_id()`
-- Use `#[should_panic]` for expected panic scenarios
-- Keep tests independent and idempotent
+1. **Config**: Uses `.env` via `dotenv`. See `.env.example`
+2. **DB**: Oracle at `127.0.0.1:1521/ORCL` (dev only)
+3. **No Tests**: Project has 0 tests
+4. **SQL**: In `src/sql/*.sql`, loaded via `include_str!()`
