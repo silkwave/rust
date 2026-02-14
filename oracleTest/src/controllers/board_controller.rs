@@ -7,9 +7,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
 use crate::{
-    common::app_state::AppState,
-    models::board::Board,
-    services::board_service::{BoardService, ServiceError},
+    common::app_state::AppState, models::board::Board, services::board_service::ServiceError,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,48 +50,15 @@ pub struct UpdateBoardRequest {
     pub content: String,
 }
 
-async fn get_board_internal(
-    service: &BoardService,
-    id: i64,
-) -> Result<Option<Board>, ServiceError> {
-    info!("[Controller] get_board_internal 호출됨, id={}", id);
-    let result = service.get_board(id).await;
-    let board = match result {
-        Ok(b) => Some(b),
-        Err(ServiceError::NotFound) => None,
-        Err(e) => return Err(e),
-    };
-    Ok(board)
-}
-
-async fn create_board_internal(
-    service: &BoardService,
-    title: &str,
-    content: &str,
-) -> Result<i64, ServiceError> {
-    info!("[Controller] create_board_internal 호출됨, title={}", title);
-    let id = service.create_board(title, content).await?;
-    Ok(id)
-}
-
-async fn update_board_internal(
-    service: &BoardService,
-    id: i64,
-    title: &str,
-    content: &str,
-) -> Result<(), ServiceError> {
-    info!("[Controller] update_board_internal 호출됨, id={}", id);
-    service.update_board(id, title, content).await?;
-    Ok(())
-}
-
-async fn delete_board_internal(
-    service: &BoardService,
-    id: i64,
-) -> Result<(), ServiceError> {
-    info!("[Controller] delete_board_internal 호출됨, id={}", id);
-    service.delete_board(id).await?;
-    Ok(())
+impl From<Board> for BoardResponse {
+    fn from(board: Board) -> Self {
+        Self {
+            id: board.id,
+            title: board.title,
+            content: board.content,
+            created_at: board.created_at.map(|ts| ts.to_string()),
+        }
+    }
 }
 
 pub async fn list_boards(
@@ -102,21 +67,17 @@ pub async fn list_boards(
 ) -> Result<Json<CursorResponse>, StatusCode> {
     let size = cursor.size.unwrap_or(10);
 
-    let (boards, next_cursor) = state.service.get_boards_cursor(cursor.last_id, size).await.map_err(|e| {
-        error!("게시글 목록 조회 실패: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let (boards, next_cursor) = state
+        .service
+        .get_boards_cursor(cursor.last_id, size)
+        .await
+        .map_err(|e| {
+            error!("게시글 목록 조회 실패: {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     let has_more = boards.len() as i64 == size;
-    let data: Vec<BoardResponse> = boards
-        .into_iter()
-        .map(|b| BoardResponse {
-            id: b.id,
-            title: b.title,
-            content: b.content,
-            created_at: b.created_at.map(|ts| ts.to_string()),
-        })
-        .collect();
+    let data = boards.into_iter().map(BoardResponse::from).collect();
 
     Ok(Json(CursorResponse {
         data,
@@ -133,18 +94,14 @@ pub async fn get_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<BoardResponse>, StatusCode> {
-    let board = get_board_internal(&state.service, id).await.map_err(|e| {
-        error!("게시글 조회 실패: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-    match board {
-        Some(b) => Ok(Json(BoardResponse {
-            id: b.id,
-            title: b.title,
-            content: b.content,
-            created_at: b.created_at.map(|ts| ts.to_string()),
-        })),
-        None => Err(StatusCode::NOT_FOUND),
+    info!("[Controller] get_board 호출됨, id={}", id);
+    match state.service.get_board(id).await {
+        Ok(board) => Ok(Json(BoardResponse::from(board))),
+        Err(ServiceError::NotFound) => Err(StatusCode::NOT_FOUND),
+        Err(e) => {
+            error!("게시글 조회 실패: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 
@@ -152,7 +109,10 @@ pub async fn create_board(
     State(state): State<AppState>,
     Json(req): Json<CreateBoardRequest>,
 ) -> Result<Json<BoardResponse>, StatusCode> {
-    let id = create_board_internal(&state.service, &req.title, &req.content)
+    info!("[Controller] create_board 호출됨, title={}", req.title);
+    let id = state
+        .service
+        .create_board(&req.title, &req.content)
         .await
         .map_err(|e| {
             error!("게시글 생성 실패: {:?}", e);
@@ -171,7 +131,10 @@ pub async fn update_board(
     State(state): State<AppState>,
     Json(req): Json<UpdateBoardRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    update_board_internal(&state.service, id, &req.title, &req.content)
+    info!("[Controller] update_board 호출됨, id={}", id);
+    state
+        .service
+        .update_board(id, &req.title, &req.content)
         .await
         .map_err(|e| {
             error!("게시글 수정 실패: {:?}", e);
@@ -187,7 +150,8 @@ pub async fn delete_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
-    delete_board_internal(&state.service, id).await.map_err(|e| {
+    info!("[Controller] delete_board 호출됨, id={}", id);
+    state.service.delete_board(id).await.map_err(|e| {
         error!("게시글 삭제 실패: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;

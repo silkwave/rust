@@ -193,6 +193,29 @@
         const errorText = document.getElementById('errorText');
         const toastContainer = document.getElementById('toastContainer');
         const submitBtn = document.getElementById('submitBtn');
+        const LOADING_HTML = '<div class="loading"><div class="spinner"></div><p>게시글을 불러오는 중...</p></div>';
+        const ERROR_HTML = '<div class="empty-state"><p>오류가 발생했습니다</p></div>';
+        const EMPTY_HTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><p>게시글이 없습니다. 첫 번째 글을 작성해보세요!</p></div>';
+
+        // ===== 공통 유틸 함수 =====
+        function getBoardsUrl() {
+            return cursor && cursor > 0
+                ? `${API_BASE}?last_id=${cursor}&size=${DEFAULT_SIZE}`
+                : `${API_BASE}?size=${DEFAULT_SIZE}`;
+        }
+
+        function getCardsHtml(boards) {
+            return boards.map(board => createBoardCard(board)).join('');
+        }
+
+        async function getErrorMessage(response, fallbackMessage) {
+            try {
+                const error = await response.json();
+                return error.message || fallbackMessage;
+            } catch {
+                return fallbackMessage;
+            }
+        }
 
         // ===== 에러 표시 함수 =====
         // 화면 상단에 에러 메시지를 표시합니다.
@@ -277,18 +300,14 @@
 
             // 첫 페이지가 아니면 로딩 스피너 표시
             if (!append) { 
-                boardsList.innerHTML = '<div class="loading"><div class="spinner"></div><p>게시글을 불러오는 중...</p></div>'; 
+                boardsList.innerHTML = LOADING_HTML;
             }
 
             try {
                 hideError();
-                
+
                 // 커서 기반 페이징: 커서가 있으면 last_id 파라미터 포함
-                const url = (cursor && cursor > 0) 
-                    ? `${API_BASE}?last_id=${cursor}&size=${DEFAULT_SIZE}` 
-                    : `${API_BASE}?size=${DEFAULT_SIZE}`;
-                
-                const response = await fetch(url);
+                const response = await fetch(getBoardsUrl());
                 if (!response.ok) throw new Error(`HTTP ${response.status}: 서버 오류`);
                 
                 const result = await response.json();
@@ -309,7 +328,7 @@
                 console.error('게시글 목록 불러오기 실패:', error);
                 showError(error.message || '게시글을 불러오는데 실패했습니다');
                 if (!append) {
-                    boardsList.innerHTML = '<div class="empty-state"><p>오류가 발생했습니다</p></div>';
+                    boardsList.innerHTML = ERROR_HTML;
                 }
             } finally { 
                 isLoading = false;
@@ -321,10 +340,10 @@
         // 게시글 목록을 처음부터 다시 그립니다.
         function renderBoards(boards) {
             if (boards.length === 0) {
-                boardsList.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><p>게시글이 없습니다. 첫 번째 글을 작성해보세요!</p></div>';
+                boardsList.innerHTML = EMPTY_HTML;
                 return;
             }
-            boardsList.innerHTML = boards.map(board => createBoardCard(board)).join('');
+            boardsList.innerHTML = getCardsHtml(boards);
             addLoadMoreButton();
         }
 
@@ -337,11 +356,11 @@
             
             // "더 보기" 버튼 앞에 새 게시글 추가
             const loadMoreDiv = boardsList.querySelector('.load-more');
+            const cardsHtml = getCardsHtml(boards);
             if (loadMoreDiv) {
-                const cardsHtml = boards.map(board => createBoardCard(board)).join('');
                 loadMoreDiv.insertAdjacentHTML('beforebegin', cardsHtml);
             } else {
-                boardsList.innerHTML += boards.map(board => createBoardCard(board)).join('');
+                boardsList.insertAdjacentHTML('beforeend', cardsHtml);
             }
         }
 
@@ -436,8 +455,7 @@
                 });
 
                 if (!response.ok) { 
-                    const error = await response.json(); 
-                    throw new Error(error.message || '게시글 작성에 실패했습니다'); 
+                    throw new Error(await getErrorMessage(response, '게시글 작성에 실패했습니다'));
                 }
                 
                 createForm.reset();                // 폼 초기화
@@ -527,9 +545,9 @@
                 return; 
             }
 
-            const editForm = document.querySelector(`#editForm`);
-            const submitBtn = editForm.querySelector('button[type="submit"]');
-            setButtonLoading(submitBtn, true);
+            const editForm = document.querySelector('#editForm');
+            const editSubmitBtn = editForm.querySelector('button[type="submit"]');
+            setButtonLoading(editSubmitBtn, true);
 
             try {
                 const response = await fetch(`${API_BASE}/${id}`, {
@@ -544,7 +562,7 @@
             } catch (error) {
                 showError(error.message);
             } finally { 
-                setButtonLoading(submitBtn, false); 
+                setButtonLoading(editSubmitBtn, false); 
             }
         }
 

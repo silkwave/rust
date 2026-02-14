@@ -16,8 +16,15 @@ impl BoardRepository {
     }
 
     /// 커서 기반 페이징 조회
-    pub async fn find_by_cursor(&self, last_id: Option<i64>, size: i64) -> Result<Vec<Board>, oracle::Error> {
-        info!("[Repository] find_by_cursor 호출됨, last_id={:?}, size={}", last_id, size);
+    pub async fn find_by_cursor(
+        &self,
+        last_id: Option<i64>,
+        size: i64,
+    ) -> Result<Vec<Board>, oracle::Error> {
+        info!(
+            "[Repository] find_by_cursor 호출됨, last_id={:?}, size={}",
+            last_id, size
+        );
         let conn = self.pool.conn.lock().await;
         // :1 (IS NULL check), :2 (ID < :2), :3 (FETCH)
         let rows = conn.query(SELECT_BOARD, &[&last_id, &last_id, &size])?;
@@ -38,7 +45,7 @@ impl BoardRepository {
         let conn = self.pool.conn.lock().await;
         let sql = "SELECT COUNT(*) FROM BOARD";
         let mut rows = conn.query(sql, &[])?;
-        
+
         if let Some(row_result) = rows.next() {
             let count: i64 = row_result?.get(0)?;
             debug!("[Repository] count_all 반환: {}개", count);

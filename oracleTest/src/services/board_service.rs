@@ -37,34 +37,39 @@ impl BoardService {
         last_id: Option<i64>,
         size: i64,
     ) -> Result<(Vec<Board>, Option<i64>), ServiceError> {
-        info!("[Service] get_boards_cursor 호출됨, last_id={:?}, size={}", last_id, size);
-        
+        info!(
+            "[Service] get_boards_cursor 호출됨, last_id={:?}, size={}",
+            last_id, size
+        );
+
         if size <= 0 {
-            return Err(ServiceError::InvalidInput("size는 1 이상이어야 합니다".to_string()));
+            return Err(ServiceError::InvalidInput(
+                "size는 1 이상이어야 합니다".to_string(),
+            ));
         }
 
         let boards = self.repository.find_by_cursor(last_id, size).await?;
-        
+
         let next_cursor = boards.last().map(|b| b.id);
         let total = self.repository.count_all().await?;
 
-        debug!("[Service] get_boards_cursor 반환: {}개 (total={})", boards.len(), total);
+        debug!(
+            "[Service] get_boards_cursor 반환: {}개 (total={})",
+            boards.len(),
+            total
+        );
         Ok((boards, next_cursor))
     }
 
     /// 특정 게시글 조회 로직 (ID 유효성 검사 포함)
     pub async fn get_board(&self, id: i64) -> Result<Board, ServiceError> {
         info!("[Service] get_board 호출됨, id={}", id);
-        if id <= 0 {
-            warn!("[Service] 유효하지 않은 ID: {}", id);
-            return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
-        }
+        self.validate_id(id)?;
         debug!("[Service] ID 유효성 검사 통과: {}", id);
-        let board = self.repository.find_by_id(id).await?;
-        match board {
-            Some(b) => {
+        match self.repository.find_by_id(id).await? {
+            Some(board) => {
                 debug!("[Service] get_board 반환: 게시글 id={} 찾음", id);
-                Ok(b)
+                Ok(board)
             }
             None => {
                 debug!("[Service] get_board 반환: 게시글 id={} 없음 (NotFound)", id);
@@ -93,46 +98,51 @@ impl BoardService {
         content: &str,
     ) -> Result<bool, ServiceError> {
         info!("[Service] update_board 호출됨, id={}, title={}", id, title);
-        if id <= 0 {
-            warn!("[Service] 유효하지 않은 ID: {}", id);
-            return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
-        }
+        self.validate_id(id)?;
         self.validate_title(title)?;
         self.validate_content(content)?;
         debug!("[Service] ID, 제목, 내용 유효성 검사 통과");
 
         let updated = self.repository.update(id, title, content).await?;
-        if !updated {
+        if updated {
+            info!("[Service] update_board 반환: 게시글 수정 완료 id={}", id);
+            Ok(true)
+        } else {
             warn!("[Service] 수정할 게시글 없음 id={}", id);
             debug!(
                 "[Service] update_board 반환: 게시글 id={} 수정 실패 (NotFound)",
                 id
             );
-            return Err(ServiceError::NotFound);
+            Err(ServiceError::NotFound)
         }
-        info!("[Service] update_board 반환: 게시글 수정 완료 id={}", id);
-        Ok(true)
     }
 
     /// 게시글 삭제 로직
     pub async fn delete_board(&self, id: i64) -> Result<bool, ServiceError> {
         info!("[Service] delete_board 호출됨, id={}", id);
-        if id <= 0 {
-            warn!("[Service] 유효하지 않은 ID: {}", id);
-            return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
-        }
+        self.validate_id(id)?;
         debug!("[Service] ID 유효성 검사 통과: {}", id);
         let deleted = self.repository.delete(id).await?;
-        if !deleted {
+        if deleted {
+            info!("[Service] delete_board 반환: 게시글 삭제 완료 id={}", id);
+            Ok(true)
+        } else {
             warn!("[Service] 삭제할 게시글 없음 id={}", id);
             debug!(
                 "[Service] delete_board 반환: 게시글 id={} 삭제 실패 (NotFound)",
                 id
             );
-            return Err(ServiceError::NotFound);
+            Err(ServiceError::NotFound)
         }
-        info!("[Service] delete_board 반환: 게시글 삭제 완료 id={}", id);
-        Ok(true)
+    }
+
+    /// 제목 유효성 검사: 비어있거나 너무 긴 경우 에러
+    fn validate_id(&self, id: i64) -> Result<(), ServiceError> {
+        if id <= 0 {
+            warn!("[Service] 유효하지 않은 ID: {}", id);
+            return Err(ServiceError::InvalidInput("Invalid ID".to_string()));
+        }
+        Ok(())
     }
 
     /// 제목 유효성 검사: 비어있거나 너무 긴 경우 에러
