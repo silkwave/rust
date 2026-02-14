@@ -15,11 +15,12 @@ impl BoardRepository {
         Self { pool }
     }
 
-    /// 모든 게시글 조회 (SELECT)
-    pub async fn find_all(&self) -> Result<Vec<Board>, oracle::Error> {
-        info!("[Repository] find_all 호출됨");
+    /// 커서 기반 페이징 조회
+    pub async fn find_by_cursor(&self, last_id: Option<i64>, size: i64) -> Result<Vec<Board>, oracle::Error> {
+        info!("[Repository] find_by_cursor 호출됨, last_id={:?}, size={}", last_id, size);
         let conn = self.pool.conn.lock().await;
-        let rows = conn.query(SELECT_BOARD, &[])?;
+        // :1 (IS NULL check), :2 (ID < :2), :3 (FETCH)
+        let rows = conn.query(SELECT_BOARD, &[&last_id, &last_id, &size])?;
 
         let mut boards = Vec::new();
         for row_result in rows {
@@ -27,8 +28,24 @@ impl BoardRepository {
             let board = self.row_to_board(row)?;
             boards.push(board);
         }
-        debug!("[Repository] find_all 반환: {}개의 게시글", boards.len());
+        debug!("[Repository] find_by_cursor 반환: {}개", boards.len());
         Ok(boards)
+    }
+
+    /// 전체 게시글 수 조회
+    pub async fn count_all(&self) -> Result<i64, oracle::Error> {
+        info!("[Repository] count_all 호출됨");
+        let conn = self.pool.conn.lock().await;
+        let sql = "SELECT COUNT(*) FROM BOARD";
+        let mut rows = conn.query(sql, &[])?;
+        
+        if let Some(row_result) = rows.next() {
+            let count: i64 = row_result?.get(0)?;
+            debug!("[Repository] count_all 반환: {}개", count);
+            Ok(count)
+        } else {
+            Ok(0)
+        }
     }
 
     /// ID로 게시글 조회 (SELECT WHERE ID = ?)

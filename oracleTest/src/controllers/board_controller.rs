@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{Html, Json},
 };
@@ -21,6 +21,26 @@ pub struct BoardResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct CursorRequest {
+    pub last_id: Option<i64>,
+    pub size: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CursorResponse {
+    pub data: Vec<BoardResponse>,
+    pub pagination: CursorPagination,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CursorPagination {
+    pub last_id: Option<i64>,
+    pub next_cursor: Option<i64>,
+    pub size: i64,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateBoardRequest {
     pub title: String,
     pub content: String,
@@ -30,14 +50,6 @@ pub struct CreateBoardRequest {
 pub struct UpdateBoardRequest {
     pub title: String,
     pub content: String,
-}
-
-async fn list_boards_internal(
-    service: &BoardService,
-) -> Result<Vec<Board>, ServiceError> {
-    info!("[Controller] list_boards_internal 호출됨");
-    let boards = service.get_all_boards().await?;
-    Ok(boards)
 }
 
 async fn get_board_internal(
@@ -86,12 +98,17 @@ async fn delete_board_internal(
 
 pub async fn list_boards(
     State(state): State<AppState>,
-) -> Result<Json<Vec<BoardResponse>>, StatusCode> {
-    let boards = list_boards_internal(&state.service).await.map_err(|e| {
+    Query(cursor): Query<CursorRequest>,
+) -> Result<Json<CursorResponse>, StatusCode> {
+    let size = cursor.size.unwrap_or(10);
+
+    let (boards, next_cursor) = state.service.get_boards_cursor(cursor.last_id, size).await.map_err(|e| {
         error!("게시글 목록 조회 실패: {:?}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
-    let response: Vec<BoardResponse> = boards
+
+    let has_more = boards.len() as i64 == size;
+    let data: Vec<BoardResponse> = boards
         .into_iter()
         .map(|b| BoardResponse {
             id: b.id,
@@ -100,7 +117,16 @@ pub async fn list_boards(
             created_at: b.created_at.map(|ts| ts.to_string()),
         })
         .collect();
-    Ok(Json(response))
+
+    Ok(Json(CursorResponse {
+        data,
+        pagination: CursorPagination {
+            last_id: cursor.last_id,
+            next_cursor,
+            size,
+            has_more,
+        },
+    }))
 }
 
 pub async fn get_board(

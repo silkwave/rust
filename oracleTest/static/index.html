@@ -146,6 +146,15 @@
             gap: 1rem;
         }
 
+        .load-more {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .load-more .btn {
+            min-width: 200px;
+        }
+
         .board-card {
             background: var(--card-bg);
             border-radius: 12px;
@@ -253,6 +262,12 @@
 
     <script>
         const API_BASE = '/boards';
+        const DEFAULT_SIZE = 10;
+
+        // 상태 관리
+        let cursor = null;
+        let hasMore = false;
+        let isLoading = false;
 
         // DOM 요소 참조
         const createForm = document.getElementById('createForm');
@@ -270,31 +285,79 @@
             errorMessage.classList.add('hidden');
         }
 
-        // 모든 게시글 조회 (API 호출)
-        async function fetchBoards() {
-            console.log('[API] 게시글 목록을 불러옵니다.');
+        // 게시글 조회 (커서 기반 페이징)
+        async function fetchBoards(append = false) {
+            if (isLoading) return;
+            isLoading = true;
+
+            console.log('[API] 게시글 목록을 불러옵니다.', { cursor, append });
             try {
                 hideError();
-                const response = await fetch(API_BASE);
+                
+                const url = cursor 
+                    ? `${API_BASE}?last_id=${cursor}&size=${DEFAULT_SIZE}`
+                    : `${API_BASE}?size=${DEFAULT_SIZE}`;
+                
+                const response = await fetch(url);
                 if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다');
-                const boards = await response.json();
-                console.log('[API] 게시글 목록을 성공적으로 불러왔습니다:', boards);
-                renderBoards(boards);
+                
+                const result = await response.json();
+                console.log('[API] 게시글 목록을 성공적으로 불러왔습니다:', result);
+
+                cursor = result.pagination.next_cursor;
+                hasMore = result.pagination.has_more;
+
+                if (append) {
+                    appendBoards(result.data);
+                } else {
+                    renderBoards(result.data);
+                }
+
+                updateLoadMoreButton();
             } catch (error) {
                 console.error('[API] 게시글 목록 불러오기 실패:', error.message);
                 showError(error.message);
-                boardsList.innerHTML = '<div class="empty-state">게시글을 불러오는데 실패했습니다</div>';
+                if (!append) {
+                    boardsList.innerHTML = '<div class="empty-state">게시글을 불러오는데 실패했습니다</div>';
+                }
+            } finally {
+                isLoading = false;
             }
         }
 
-        // 게시글 목록 렌더링 (HTML 생성)
+        // 게시글 목록 렌더링 (새로고침)
         function renderBoards(boards) {
             if (boards.length === 0) {
                 boardsList.innerHTML = '<div class="empty-state">게시글이 없습니다. 첫 번째 글을 작성해보세요!</div>';
                 return;
             }
 
-            boardsList.innerHTML = boards.map(board => `
+            boardsList.innerHTML = boards.map(board => createBoardCard(board)).join('');
+            addLoadMoreButton();
+        }
+
+        // 게시글 목록 추가 (무한 스크롤)
+        function appendBoards(boards) {
+            const existingCards = boardsList.querySelectorAll('.board-card');
+            const newHtml = boards.map(board => createBoardCard(board)).join('');
+            
+            // 빈 상태 제거
+            const emptyState = boardsList.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            // Load More 버튼 앞에 추가
+            const loadMoreBtn = boardsList.querySelector('.load-more');
+            if (loadMoreBtn) {
+                loadMoreBtn.insertAdjacentHTML('beforebegin', newHtml);
+            } else {
+                boardsList.innerHTML = newHtml;
+                addLoadMoreButton();
+            }
+        }
+
+        // 게시글 카드 HTML 생성
+        function createBoardCard(board) {
+            return `
                 <div class="board-card" data-id="${board.id}">
                     <div class="board-header">
                         <h3 class="board-title">${escapeHtml(board.title)}</h3>
@@ -306,7 +369,42 @@
                     <div class="board-content">${escapeHtml(board.content)}</div>
                     ${board.created_at ? `<div class="board-meta">작성일: ${new Date(board.created_at).toLocaleString()}</div>` : ''}
                 </div>
-            `).join('');
+            `;
+        }
+
+        // Load More 버튼 추가
+        function addLoadMoreButton() {
+            const existing = boardsList.querySelector('.load-more');
+            if (existing) existing.remove();
+
+            if (hasMore) {
+                const btn = document.createElement('div');
+                btn.className = 'load-more';
+                btn.innerHTML = `<button class="btn btn-primary" onclick="loadMore()">더 보기</button>`;
+                boardsList.appendChild(btn);
+            }
+        }
+
+        // Load More 버튼 상태 업데이트
+        function updateLoadMoreButton() {
+            const btn = boardsList.querySelector('.load-more .btn');
+            if (btn) {
+                if (isLoading) {
+                    btn.textContent = '로딩 중...';
+                    btn.disabled = true;
+                } else if (hasMore) {
+                    btn.textContent = '더 보기';
+                    btn.disabled = false;
+                } else {
+                    btn.textContent = '더 이상 게시물이 없습니다';
+                    btn.disabled = true;
+                }
+            }
+        }
+
+        // 더 보기 버튼 클릭
+        function loadMore() {
+            fetchBoards(true);
         }
 
         // XSS 방지를 위한 HTML 이스케이프 처리
@@ -340,6 +438,9 @@
 
                 console.log('[API] 게시글 작성을 성공했습니다.');
                 createForm.reset();
+                
+                // 첫 페이지부터 다시 로드
+                cursor = null;
                 await fetchBoards();
             } catch (error) {
                 console.error('[API] 게시글 작성 실패:', error.message);
@@ -360,6 +461,9 @@
 
                 if (!response.ok) throw new Error('게시글 삭제에 실패했습니다');
                 console.log(`[API] 게시글 ID: ${id} 삭제를 성공했습니다.`);
+                
+                // 첫 페이지부터 다시 로드
+                cursor = null;
                 await fetchBoards();
             } catch (error) {
                 console.error(`[API] 게시글 ID: ${id} 삭제 실패:`, error.message);

@@ -31,12 +31,25 @@ impl BoardService {
         Self { repository }
     }
 
-    /// 모든 게시글 조회 로직
-    pub async fn get_all_boards(&self) -> Result<Vec<Board>, ServiceError> {
-        info!("[Service] get_all_boards 호출됨");
-        let boards = self.repository.find_all().await?;
-        debug!("[Service] get_all_boards 반환: {}개의 게시글", boards.len());
-        Ok(boards)
+    /// 커서 기반 페이징 조회
+    pub async fn get_boards_cursor(
+        &self,
+        last_id: Option<i64>,
+        size: i64,
+    ) -> Result<(Vec<Board>, Option<i64>), ServiceError> {
+        info!("[Service] get_boards_cursor 호출됨, last_id={:?}, size={}", last_id, size);
+        
+        if size <= 0 {
+            return Err(ServiceError::InvalidInput("size는 1 이상이어야 합니다".to_string()));
+        }
+
+        let boards = self.repository.find_by_cursor(last_id, size).await?;
+        
+        let next_cursor = boards.last().map(|b| b.id);
+        let total = self.repository.count_all().await?;
+
+        debug!("[Service] get_boards_cursor 반환: {}개 (total={})", boards.len(), total);
+        Ok((boards, next_cursor))
     }
 
     /// 특정 게시글 조회 로직 (ID 유효성 검사 포함)
