@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>게시판</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <style>
         :root {
             --primary: #3b82f6;
@@ -329,7 +330,7 @@
                 </svg>
                 게시판
             </h1>
-            <p class="subtitle">CRUD operations with Axum + Oracle</p>
+            <p class="subtitle">Axum과 Oracle을 활용한 CRUD 게시판</p>
         </header>
 
         <div id="errorMessage" class="error hidden">
@@ -398,9 +399,13 @@
             errorMessage.classList.remove('hidden');
         }
 
-        function hideError() { errorMessage.classList.add('hidden'); }
+        function hideError() {
+            console.log('[UI] 에러 메시지 숨김');
+            errorMessage.classList.add('hidden');
+        }
 
         function showToast(message, type = 'success') {
+            console.log(`[UI] Toast 표시: ${message} (${type})`);
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             const icon = type === 'success' 
@@ -415,6 +420,7 @@
         }
 
         function showModal(title, message, onConfirm) {
+            console.log(`[UI] Modal 표시: ${title}`);
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
             overlay.innerHTML = `
@@ -433,6 +439,7 @@
         }
 
         function setButtonLoading(btn, loading) {
+            console.log(`[UI] 버튼 로딩 상태: ${loading ? '진행 중' : '완료'}`);
             if (loading) { btn.classList.add('btn-loading'); btn.disabled = true; }
             else { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
@@ -465,6 +472,7 @@
         }
 
         function renderBoards(boards) {
+            console.log(`[UI] 게시글 ${boards.length}개를 렌더링합니다.`);
             if (boards.length === 0) {
                 boardsList.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><p>게시글이 없습니다. 첫 번째 글을 작성해보세요!</p></div>';
                 return;
@@ -474,6 +482,7 @@
         }
 
         function appendBoards(boards) {
+            console.log(`[UI] 게시글 ${boards.length}개를 추가 렌더링합니다.`);
             const emptyState = boardsList.querySelector('.empty-state');
             if (emptyState) emptyState.remove();
             const loadMoreBtn = boardsList.querySelector('.load-more');
@@ -499,6 +508,7 @@
             const existing = boardsList.querySelector('.load-more');
             if (existing) existing.remove();
             if (hasMore) {
+                console.log('[UI] 더 보기 버튼 생성');
                 const btn = document.createElement('div');
                 btn.className = 'load-more';
                 btn.innerHTML = `<button class="btn btn-primary" onclick="loadMore()">더 보기</button>`;
@@ -509,12 +519,16 @@
         function updateLoadMoreButton() {
             const btn = boardsList.querySelector('.load-more .btn');
             if (btn) {
+                console.log(`[UI] 더 보기 버튼 상태 갱신 (로딩: ${isLoading}, 데이터 있음: ${hasMore})`);
                 if (isLoading) { btn.classList.add('btn-loading'); btn.disabled = true; }
                 else { btn.classList.remove('btn-loading'); btn.disabled = false; btn.textContent = hasMore ? '더 보기' : '더 이상 게시물이 없습니다'; }
             }
         }
 
-        function loadMore() { fetchBoards(true); }
+        function loadMore() {
+            console.log('[UI] 더 보기 버튼 클릭됨');
+            fetchBoards(true);
+        }
 
         function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
 
@@ -548,7 +562,10 @@
             } finally { setButtonLoading(submitBtn, false); }
         });
 
-        function confirmDelete(id) { showModal('게시글 삭제', '정말로 이 게시글을 삭제하시겠습니까?', () => deleteBoard(id)); }
+        function confirmDelete(id) {
+            console.log(`[UI] 삭제 확인 모달 열기 (ID: ${id})`);
+            showModal('게시글 삭제', '정말로 이 게시글을 삭제하시겠습니까?', () => deleteBoard(id));
+        }
 
         async function deleteBoard(id) {
             hideError();
