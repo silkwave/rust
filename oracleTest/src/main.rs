@@ -2,7 +2,7 @@
 
 mod common;
 mod config;
-mod handlers;
+mod controllers;
 mod middleware;
 mod models;
 mod repositories;
@@ -14,7 +14,6 @@ use crate::middleware::logging::log_middleware;
 use crate::routes::api_routes;
 use axum::middleware as axum_middleware;
 use config::Config;
-use handlers::board_handler::BoardController;
 use models::board::{create_connection, create_pool};
 use repositories::board_repository::BoardRepository;
 use services::board_service::BoardService;
@@ -41,13 +40,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conn = create_connection(&config.db_user, &config.db_password, &config.db_connect)?;
     let pool = create_pool(conn);
 
-    // 4. 의존성 주입 (Repository -> Service -> Controller)
+    // 4. 의존성 주입 (Repository -> Service)
     let repository = Arc::new(BoardRepository::new(pool));
     let service = Arc::new(BoardService::new(repository));
-    let controller = Arc::new(BoardController::new(service));
 
-    // 5. 애플리케이션 상태 생성 (Controller 공유)
-    let state = AppState { controller };
+    // 5. 애플리케이션 상태 생성 (Service 공유)
+    let state = AppState { service };
 
     // 6. 라우터 설정 (미들웨어 및 상태 주입)
     let app = api_routes()
