@@ -394,18 +394,15 @@
         const submitBtn = document.getElementById('submitBtn');
 
         function showError(message) {
-            console.error('[UI] 오류 발생:', message);
             errorText.textContent = message;
             errorMessage.classList.remove('hidden');
         }
 
         function hideError() {
-            console.log('[UI] 에러 메시지 숨김');
             errorMessage.classList.add('hidden');
         }
 
         function showToast(message, type = 'success') {
-            console.log(`[UI] Toast 표시: ${message} (${type})`);
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             const icon = type === 'success' 
@@ -420,7 +417,6 @@
         }
 
         function showModal(title, message, onConfirm) {
-            console.log(`[UI] Modal 표시: ${title}`);
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
             overlay.innerHTML = `
@@ -439,7 +435,29 @@
         }
 
         function setButtonLoading(btn, loading) {
-            console.log(`[UI] 버튼 로딩 상태: ${loading ? '진행 중' : '완료'}`);
+            if (loading) { btn.classList.add('btn-loading'); btn.disabled = true; }
+            else { btn.classList.remove('btn-loading'); btn.disabled = false; }
+        }
+
+        function showModal(title, message, onConfirm) {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `
+                <div class="modal">
+                    <h3 class="modal-title">${title}</h3>
+                    <p class="modal-content">${message}</p>
+                    <div class="modal-actions">
+                        <button class="btn btn-secondary" id="modalCancel">취소</button>
+                        <button class="btn btn-danger" id="modalConfirm">삭제</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            overlay.querySelector('#modalCancel').onclick = () => overlay.remove();
+            overlay.querySelector('#modalConfirm').onclick = () => { overlay.remove(); onConfirm(); };
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+        }
+
+        function setButtonLoading(btn, loading) {
             if (loading) { btn.classList.add('btn-loading'); btn.disabled = true; }
             else { btn.classList.remove('btn-loading'); btn.disabled = false; }
         }
@@ -447,32 +465,43 @@
         async function fetchBoards(append = false) {
             if (isLoading) return;
             isLoading = true;
+            updateLoadMoreButton();
+
             if (!append) { boardsList.innerHTML = '<div class="loading"><div class="spinner"></div><p>게시글을 불러오는 중...</p></div>'; }
 
-            console.log('[API] 게시글 목록을 불러옵니다.', { cursor, append });
             try {
                 hideError();
-                const url = cursor ? `${API_BASE}?last_id=${cursor}&size=${DEFAULT_SIZE}` : `${API_BASE}?size=${DEFAULT_SIZE}`;
+                const url = (cursor && cursor > 0) 
+                    ? `${API_BASE}?last_id=${cursor}&size=${DEFAULT_SIZE}` 
+                    : `${API_BASE}?size=${DEFAULT_SIZE}`;
+                
                 const response = await fetch(url);
-                if (!response.ok) throw new Error('게시글을 불러오는데 실패했습니다');
+                if (!response.ok) throw new Error(`HTTP ${response.status}: 서버 오류`);
                 
                 const result = await response.json();
-                console.log('[API] 게시글 목록을 성공적으로 불러왔습니다:', result);
+                
+                if (!result.data || !result.pagination) {
+                    throw new Error('잘못된 응답 형식');
+                }
+
                 cursor = result.pagination.next_cursor;
                 hasMore = result.pagination.has_more;
 
                 if (append) appendBoards(result.data);
                 else renderBoards(result.data);
-                updateLoadMoreButton();
             } catch (error) {
-                console.error('[API] 게시글 목록 불러오기 실패:', error.message);
-                showError(error.message);
-                boardsList.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg><p>게시글을 불러오는데 실패했습니다</p></div>';
-            } finally { isLoading = false; }
+                console.error('게시글 목록 불러오기 실패:', error);
+                showError(error.message || '게시글을 불러오는데 실패했습니다');
+                if (!append) {
+                    boardsList.innerHTML = '<div class="empty-state"><p>오류가 발생했습니다</p></div>';
+                }
+            } finally { 
+                isLoading = false;
+                updateLoadMoreButton();
+            }
         }
 
         function renderBoards(boards) {
-            console.log(`[UI] 게시글 ${boards.length}개를 렌더링합니다.`);
             if (boards.length === 0) {
                 boardsList.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><p>게시글이 없습니다. 첫 번째 글을 작성해보세요!</p></div>';
                 return;
@@ -482,12 +511,16 @@
         }
 
         function appendBoards(boards) {
-            console.log(`[UI] 게시글 ${boards.length}개를 추가 렌더링합니다.`);
             const emptyState = boardsList.querySelector('.empty-state');
             if (emptyState) emptyState.remove();
-            const loadMoreBtn = boardsList.querySelector('.load-more');
-            if (loadMoreBtn) { loadMoreBtn.insertAdjacentHTML('beforebegin', boards.map(board => createBoardCard(board)).join('')); }
-            else { boardsList.innerHTML += boards.map(board => createBoardCard(board)).join(''); }
+            
+            const loadMoreDiv = boardsList.querySelector('.load-more');
+            if (loadMoreDiv) {
+                const cardsHtml = boards.map(board => createBoardCard(board)).join('');
+                loadMoreDiv.insertAdjacentHTML('beforebegin', cardsHtml);
+            } else {
+                boardsList.innerHTML += boards.map(board => createBoardCard(board)).join('');
+            }
         }
 
         function createBoardCard(board) {
@@ -507,26 +540,37 @@
         function addLoadMoreButton() {
             const existing = boardsList.querySelector('.load-more');
             if (existing) existing.remove();
+            
             if (hasMore) {
-                console.log('[UI] 더 보기 버튼 생성');
-                const btn = document.createElement('div');
-                btn.className = 'load-more';
-                btn.innerHTML = `<button class="btn btn-primary" onclick="loadMore()">더 보기</button>`;
-                boardsList.appendChild(btn);
+                const loadMoreDiv = document.createElement('div');
+                loadMoreDiv.className = 'load-more';
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-primary';
+                btn.textContent = '더 보기';
+                btn.onclick = () => loadMore();
+                loadMoreDiv.appendChild(btn);
+                boardsList.appendChild(loadMoreDiv);
             }
         }
 
         function updateLoadMoreButton() {
-            const btn = boardsList.querySelector('.load-more .btn');
-            if (btn) {
-                console.log(`[UI] 더 보기 버튼 상태 갱신 (로딩: ${isLoading}, 데이터 있음: ${hasMore})`);
-                if (isLoading) { btn.classList.add('btn-loading'); btn.disabled = true; }
-                else { btn.classList.remove('btn-loading'); btn.disabled = false; btn.textContent = hasMore ? '더 보기' : '더 이상 게시물이 없습니다'; }
+            const loadMoreDiv = boardsList.querySelector('.load-more');
+            if (!loadMoreDiv) return;
+            
+            const btn = loadMoreDiv.querySelector('.btn');
+            if (!btn) return;
+
+            if (isLoading) {
+                btn.classList.add('btn-loading');
+                btn.disabled = true;
+            } else {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                btn.textContent = hasMore ? '더 보기' : '더 이상 게시물이 없습니다';
             }
         }
 
         function loadMore() {
-            console.log('[UI] 더 보기 버튼 클릭됨');
             fetchBoards(true);
         }
 
@@ -540,7 +584,6 @@
             if (!title) { showError('제목을 입력해주세요.'); return; }
             if (!content) { showError('내용을 입력해주세요.'); return; }
 
-            console.log('[API] 새 게시글 작성을 시도합니다:', { title, content });
             setButtonLoading(submitBtn, true);
 
             try {
@@ -551,47 +594,40 @@
                 });
 
                 if (!response.ok) { const error = await response.json(); throw new Error(error.message || '게시글 작성에 실패했습니다'); }
-                console.log('[API] 게시글 작성을 성공했습니다.');
                 createForm.reset();
                 showToast('게시글이 작성되었습니다.');
                 cursor = null;
                 await fetchBoards();
             } catch (error) {
-                console.error('[API] 게시글 작성 실패:', error.message);
                 showError(error.message);
             } finally { setButtonLoading(submitBtn, false); }
         });
 
         function confirmDelete(id) {
-            console.log(`[UI] 삭제 확인 모달 열기 (ID: ${id})`);
             showModal('게시글 삭제', '정말로 이 게시글을 삭제하시겠습니까?', () => deleteBoard(id));
         }
 
         async function deleteBoard(id) {
             hideError();
-            console.log(`[API] 게시글 ID: ${id} 삭제를 시도합니다.`);
             const card = document.querySelector(`.board-card[data-id="${id}"]`);
             if (card) { card.style.opacity = '0.5'; card.style.pointerEvents = 'none'; }
 
             try {
                 const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('게시글 삭제에 실패했습니다');
-                console.log(`[API] 게시글 ID: ${id} 삭제를 성공했습니다.`);
                 showToast('게시글이 삭제되었습니다.');
                 cursor = null;
                 await fetchBoards();
             } catch (error) {
-                console.error(`[API] 게시글 ID: ${id} 삭제 실패:`, error.message);
                 showError(error.message);
                 if (card) { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; }
             }
         }
 
         function editBoard(id, title, content) {
-            console.log(`[UI] 게시글 ID: ${id} 수정을 위한 폼을 엽니다.`);
             const card = document.querySelector(`.board-card[data-id="${id}"]`);
             const existingEditForm = card.querySelector('#editForm');
-            if (existingEditForm) { existingEditForm.remove(); console.log('[UI] 기존 수정 폼을 닫습니다.'); return; }
+            if (existingEditForm) { existingEditForm.remove(); return; }
 
             const editForm = document.createElement('div');
             editForm.id = 'editForm';
@@ -614,7 +650,6 @@
             const content = document.getElementById('editContent').value.trim();
             if (!title || !content) { showError('제목과 내용을 모두 입력해주세요.'); return; }
 
-            console.log(`[API] 게시글 ID: ${id} 수정을 시도합니다:`, { title, content });
             const editForm = document.querySelector(`#editForm`);
             const submitBtn = editForm.querySelector('button[type="submit"]');
             setButtonLoading(submitBtn, true);
@@ -626,16 +661,13 @@
                     body: JSON.stringify({ title, content })
                 });
                 if (!response.ok) throw new Error('게시글 수정에 실패했습니다');
-                console.log(`[API] 게시글 ID: ${id} 수정을 성공했습니다.`);
                 showToast('게시글이 수정되었습니다.');
                 await fetchBoards();
             } catch (error) {
-                console.error(`[API] 게시글 ID: ${id} 수정 실패:`, error.message);
                 showError(error.message);
             } finally { setButtonLoading(submitBtn, false); }
         }
 
-        console.log('[UI] 애플리케이션을 초기화하고 게시글을 불러옵니다.');
         fetchBoards();
     </script>
 </body>
