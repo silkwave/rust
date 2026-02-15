@@ -31,20 +31,30 @@ impl BoardService {
         Self { repository }
     }
 
-    /// 커서 기반 페이징 조회
-    pub async fn get_boards_cursor(
+    /// 페이지네이션을 사용하여 게시글 목록 조회
+    pub async fn get_boards_paged(
         &self,
-        last_id: Option<i64>,
-        size: i64,
-    ) -> Result<(Vec<Board>, Option<i64>), ServiceError> {
-        info!("[Service] get_boards_cursor 호출됨, last_id={:?}, size={}", last_id, size);
+        page: u32,
+        size: u32,
+    ) -> Result<(Vec<Board>, u32), ServiceError> {
+        info!("[Service] get_boards_paged 호출: page={}, size={}", page, size);
+        self.validate_page(page)?;
         self.validate_size(size)?;
 
-        let boards = self.repository.find_by_cursor(last_id, size).await?;
-        let next_cursor = boards.last().map(|b| b.id);
+        let total_boards = self.repository.count_all().await?;
+        let total_pages = (total_boards + size - 1) / size;
 
-        debug!("[Service] get_boards_cursor 반환: {}개", boards.len());
-        Ok((boards, next_cursor))
+        // 요청한 페이지가 총 페이지 수를 초과하는 경우
+        if page > total_pages && total_pages > 0 {
+            warn!("[Service] 요청 페이지 초과: page={}, total_pages={}", page, total_pages);
+            return Err(ServiceError::InvalidInput(format!("요청 페이지가 너무 큽니다. 최대 페이지: {}", total_pages)));
+        }
+
+        let offset = (page - 1) * size;
+        let boards = self.repository.find_paged(offset, size).await?;
+
+        debug!("[Service] get_boards_paged 반환: {}개, 총 페이지: {}", boards.len(), total_pages);
+        Ok((boards, total_pages))
     }
 
     /// 특정 게시글 조회 로직 (ID 유효성 검사 포함)
@@ -113,7 +123,16 @@ impl BoardService {
         }
     }
     
-    fn validate_size(&self, size: i64) -> Result<(), ServiceError> {
+    fn validate_page(&self, page: u32) -> Result<(), ServiceError> {
+        if page > 0 {
+            Ok(())
+        } else {
+            warn!("[Service] 유효하지 않은 페이지 번호: {}", page);
+            Err(ServiceError::InvalidInput("페이지 번호는 0보다 커야 합니다.".to_string()))
+        }
+    }
+
+    fn validate_size(&self, size: u32) -> Result<(), ServiceError> {
         if size > 0 {
             Ok(())
         } else {

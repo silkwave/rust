@@ -12,33 +12,32 @@ use crate::common::app_state::AppState;
 
 use super::{
     dto::{
-        BoardResponse, CreateBoardRequest, CursorRequest, CursorResponse, CursorPagination,
+        BoardResponse, CreateBoardRequest, PaginationRequest, PaginationResponse, PaginationMeta,
         UpdateBoardRequest,
     },
     error::ControllerError,
 };
 
-/// 게시글 목록을 커서 기반 페이징으로 조회합니다.
+/// 게시글 목록을 페이지네이션으로 조회합니다.
 pub async fn list_boards(
     State(state): State<AppState>,
-    Query(cursor): Query<CursorRequest>,
-) -> Result<Json<CursorResponse>, ControllerError> {
-    info!("[Controller] list_boards 호출됨, cursor={:?}", cursor);
-    let size = cursor.size.unwrap_or(10);
+    Query(pagination_req): Query<PaginationRequest>,
+) -> Result<Json<PaginationResponse>, ControllerError> {
+    info!("[Controller] list_boards 호출됨, pagination_req={:?}", pagination_req);
+    let page = pagination_req.page.unwrap_or(1); // 기본 1페이지
+    let size = pagination_req.size.unwrap_or(10); // 기본 10개
 
-    // 서비스 계층을 호출하여 데이터를 가져옵니다. `?` 연산자로 에러를 자동으로 처리합니다.
-    let (boards, next_cursor) = state.service.get_boards_cursor(cursor.last_id, size).await?;
+    // 서비스 계층을 호출하여 데이터를 가져옵니다.
+    let (boards, total_pages) = state.service.get_boards_paged(page, size).await?;
 
-    let has_more = boards.len() as i64 == size;
     let data = boards.into_iter().map(BoardResponse::from).collect();
 
-    Ok(Json(CursorResponse {
+    Ok(Json(PaginationResponse {
         data,
-        pagination: CursorPagination {
-            last_id: cursor.last_id,
-            next_cursor,
+        pagination: PaginationMeta {
+            current_page: page,
+            total_pages,
             size,
-            has_more,
         },
     }))
 }

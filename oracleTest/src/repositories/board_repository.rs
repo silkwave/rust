@@ -1,8 +1,8 @@
 //! Repository 계층: 데이터베이스 CRUD 작업
 
 use crate::common::queries::{
-    DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, SELECT_BOARD_BY_ID, 
-    SELECT_BOARD_SEQ_CURRVAL, UPDATE_BOARD,
+    DELETE_BOARD, INSERT_BOARD, SELECT_BOARD_BY_ID, SELECT_BOARD_COUNT,
+    SELECT_BOARD_SEQ_CURRVAL, SELECT_BOARD_PAGED, UPDATE_BOARD,
 };
 use crate::models::board::{Board, DbPool};
 use oracle::{ErrorKind, Row};
@@ -19,19 +19,25 @@ impl BoardRepository {
         Self { pool }
     }
 
-    /// 커서 기반 페이징으로 게시글 목록 조회
-    pub async fn find_by_cursor(
+    /// 전체 게시글 수 조회
+    pub async fn count_all(&self) -> Result<u32, oracle::Error> {
+        info!("[Repo] count_all 호출");
+        let conn = self.pool.conn.lock().await;
+        // 쿼리 실행 후 첫 번째 행의 첫 번째 컬럼 값을 가져옴
+        conn.query_row_as::<u32>(SELECT_BOARD_COUNT, &[])
+    }
+
+    /// 페이지네이션을 사용하여 게시글 목록 조회
+    pub async fn find_paged(
         &self,
-        last_id: Option<i64>,
-        size: i64,
+        offset: u32,
+        limit: u32,
     ) -> Result<Vec<Board>, oracle::Error> {
-        info!("[Repo] find_by_cursor 호출: last_id={:?}, size={}", last_id, size);
+        info!("[Repo] find_paged 호출: offset={}, limit={}", offset, limit);
         let conn = self.pool.conn.lock().await;
 
-        // :1 (IS NULL check), :2 (ID < :2), :3 (FETCH)
-        let rows = conn.query(SELECT_BOARD, &[&last_id, &last_id, &size])?;
+        let rows = conn.query(SELECT_BOARD_PAGED, &[&(offset as i64), &(limit as i64)])?;
 
-        // 쿼리 결과를 `Board` 벡터로 변환 (함수형 스타일)
         rows.map(|row_result| self.row_to_board(row_result?))
             .collect()
     }
@@ -41,7 +47,6 @@ impl BoardRepository {
         info!("[Repo] find_by_id 호출: id={}", id);
         let conn = self.pool.conn.lock().await;
         let mut rows = conn.query(SELECT_BOARD_BY_ID, &[&id])?;
-        // 첫 번째 행이 있으면 `row_to_board`를 적용하고, 없으면 None 반환
         rows.next()
             .map(|row_result| self.row_to_board(row_result?))
             .transpose()

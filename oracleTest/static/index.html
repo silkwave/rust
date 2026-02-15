@@ -6,25 +6,54 @@
     <title>게시판</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
     <style>
+        /* 루트 변수: 색상, 그림자, 간격 등 전역 스타일 정의 */
         :root {
-            --primary: #0f766e;
-            --primary-hover: #0d9488;
-            --primary-light: #ccfbf1;
-            --accent: #f59e0b;
-            --bg: #f6f8f6;
-            --card-bg: rgba(255, 255, 255, 0.95);
-            --text: #122027;
-            --text-secondary: #4b616d;
-            --border: #dbe3e9;
-            --danger: #dc2626;
-            --danger-hover: #b91c1c;
-            --shadow: 0 8px 24px rgba(17, 24, 39, 0.06);
-            --shadow-md: 0 14px 30px rgba(17, 24, 39, 0.1);
-            --shadow-lg: 0 22px 40px rgba(17, 24, 39, 0.14);
+            /* 컬러 팔레트 */
+            --primary: #0f766e; /* 기본 강조색 */
+            --primary-hover: #0d9488; /* 기본 강조색 (호버) */
+            --primary-light: #ccfbf1; /* 기본 강조색 (밝은 버전) */
+            --accent: #f59e0b; /* 보조 강조색 */
+
+            /* 배경 및 텍스트 색상 */
+            --bg: #f6f8f6; /* 페이지 배경 */
+            --card-bg: rgba(255, 255, 255, 0.95); /* 카드 배경 */
+            --text: #122027; /* 기본 텍스트 */
+            --text-secondary: #4b616d; /* 보조 텍스트 */
+
+            /* 경계 및 구분선 */
+            --border: #dbe3e9; /* 일반 경계선 */
+
+            /* 에러 및 경고 */
+            --danger: #dc2626; /* 위험/에러 색상 */
+            --danger-hover: #b91c1c; /* 위험/에러 색상 (호버) */
+            --error-bg: #fef2f2; /* 에러 메시지 배경 */
+            --error-border: #fecaca; /* 에러 메시지 경계선 */
+            --error-text: #991b1b; /* 에러 메시지 텍스트 */
+
+            /* 성공 메시지 */
+            --success-bg: #f0fdf4; /* 성공 메시지 배경 */
+            --success-border: #bbf7d0; /* 성공 메시지 경계선 */
+            --success-text: #166534; /* 성공 메시지 텍스트 */
+
+            /* 그림자 효과 */
+            --shadow: 0 8px 24px rgba(17, 24, 39, 0.06); /* 기본 그림자 */
+            --shadow-md: 0 14px 30px rgba(17, 24, 39, 0.1); /* 중간 그림자 */
+            --shadow-lg: 0 22px 40px rgba(17, 24, 39, 0.14); /* 큰 그림자 */
+
+            /* 간격 */
+            --spacing-xs: 0.375rem; /* 6px */
+            --spacing-sm: 0.5rem;   /* 8px */
+            --spacing-md: 0.75rem;  /* 12px */
+            --spacing-lg: 1rem;     /* 16px */
+            --spacing-xl: 1.25rem;  /* 20px */
+            --spacing-2xl: 1.5rem;  /* 24px */
+            --spacing-3xl: 2rem;    /* 32px */
         }
 
+        /* 기본 리셋 스타일 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* body 기본 스타일 및 배경 */
         body {
             font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
             background: var(--bg);
@@ -32,49 +61,68 @@
             line-height: 1.6;
             min-height: 100vh;
             position: relative;
-            overflow-x: hidden;
+            overflow-x: hidden; /* 가로 스크롤 방지 */
             background-image:
                 radial-gradient(70rem 45rem at 12% -10%, rgba(15, 118, 110, 0.16), transparent 60%),
                 radial-gradient(60rem 42rem at 90% 12%, rgba(245, 158, 11, 0.13), transparent 60%),
                 linear-gradient(180deg, #f8fbfa 0%, #f5f7f9 45%, #f6f8f6 100%);
         }
 
+        /* 배경 구체 효과 */
         .bg-orb {
             position: fixed;
-            border-radius: 999px;
-            pointer-events: none;
-            z-index: 0;
-            filter: blur(12px);
+            border-radius: 999px; /* 완전한 원 */
+            pointer-events: none; /* 마우스 이벤트 무시 */
+            z-index: 0; /* 배경으로 배치 */
+            filter: blur(12px); /* 부드러운 블러 효과 */
             opacity: 0.48;
         }
         .orb-1 { width: 220px; height: 220px; top: 18%; left: -70px; background: radial-gradient(circle at 35% 35%, #7dd3fc, #14b8a6); }
         .orb-2 { width: 280px; height: 280px; bottom: -90px; right: -80px; background: radial-gradient(circle at 30% 30%, #fde68a, #f59e0b); }
 
+        /* 컨테이너 */
         .container {
             max-width: 900px;
             margin: 0 auto;
-            padding: 1.5rem;
+            padding: var(--spacing-2xl);
             position: relative;
-            z-index: 1;
+            z-index: 1; /* 구체 효과 위에 배치 */
             animation: pageRise 0.45s ease;
         }
-        @media (min-width: 640px) { .container { padding: 2rem; } }
-        @keyframes pageRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        /* 컨테이너 반응형 패딩 */
+        @media (min-width: 640px) { .container { padding: var(--spacing-3xl); } }
 
+        /* 헤더 스타일 */
         header {
             text-align: center;
-            margin-bottom: 1.6rem;
-            padding: 1.4rem 1.2rem;
+            margin-bottom: var(--spacing-2xl);
+            padding: var(--spacing-2xl) var(--spacing-xl);
             border: 1px solid rgba(255, 255, 255, 0.55);
             background: linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(241, 250, 249, 0.82));
             border-radius: 22px;
             box-shadow: var(--shadow);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px); /* 블러 효과 */
+        }
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+        .subtitle { color: var(--text-secondary); font-size: 0.9rem; }
+        .header-meta {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap; /* 작은 화면에서 줄바꿈 */
         }
 
-        h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-        .subtitle { color: var(--text-secondary); font-size: 0.9rem; }
-        .header-meta { display: flex; gap: 0.75rem; align-items: center; justify-content: center; flex-wrap: wrap; }
+        /* 뷰 토글 버튼 */
         .view-toggle {
             border: 1px solid #cfe4e2;
             background: #f7fbfb;
@@ -82,62 +130,97 @@
             border-radius: 999px;
             font-size: 0.8rem;
             font-weight: 700;
-            padding: 0.42rem 0.8rem;
+            padding: 0.42rem var(--spacing-lg);
             cursor: pointer;
             transition: all 0.2s;
         }
         .view-toggle:hover { background: #ecf6f5; border-color: #9ccdc7; }
         .view-toggle.is-compact { background: #145f59; border-color: #145f59; color: #fff; }
 
-        .form-card {
+        /* 카드 공통 스타일 */
+        .form-card, .board-card, .empty-state, .modal-content-card { /* modal-content-card 추가 */
             background: var(--card-bg);
-            border-radius: 20px;
-            padding: 1.25rem;
+            border-radius: 18px; /* 통일된 카드 모서리 */
+            padding: var(--spacing-xl);
             box-shadow: var(--shadow);
-            margin-bottom: 1.5rem;
             border: 1px solid var(--border);
             backdrop-filter: blur(4px);
         }
-        @media (min-width: 640px) { .form-card { padding: 1.5rem; } }
+        @media (min-width: 640px) { .form-card, .board-card, .modal-content-card { padding: var(--spacing-2xl); } }
 
-        .form-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; }
-
-        .form-group input, .form-group textarea {
-            width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border);
-            border-radius: 12px; font-size: 0.9375rem; transition: all 0.2s; background: #fff;
+        /* 폼 카드 */
+        .form-card { margin-bottom: var(--spacing-2xl); }
+        .form-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
         }
-        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: var(--card-bg); }
+        .form-group { margin-bottom: var(--spacing-lg); }
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: var(--spacing-md) var(--spacing-lg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+            background: var(--card-bg);
+        }
         .form-group textarea { min-height: 100px; resize: vertical; }
 
-        .btn { padding: 0.625rem 1.25rem; border: none; border-radius: 11px; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
+        /* 버튼 공통 스타일 */
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 11px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
+        }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* 버튼 종류별 스타일 */
         .btn-primary { background: linear-gradient(130deg, var(--primary), var(--primary-hover)); color: white; }
         .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-md); filter: saturate(1.06); }
-        .btn-danger { background: var(--danger); color: white; padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
+        .btn-danger { background: var(--danger); color: white; padding: var(--spacing-sm) var(--spacing-lg); font-size: 0.8125rem; }
         .btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
         .btn-secondary { background: #f9fbfb; color: var(--text); border: 1px solid var(--border); }
         .btn-secondary:hover:not(:disabled) { background: #edf4f4; }
-        .btn-edit { background: #2563eb; color: white; padding: 0.5rem 0.875rem; font-size: 0.8125rem; margin-right: 0.375rem; }
+        .btn-edit { background: #2563eb; color: white; padding: var(--spacing-sm) var(--spacing-lg); font-size: 0.8125rem; margin-right: var(--spacing-xs); }
         .btn-edit:hover:not(:disabled) { background: #1d4ed8; }
-        .form-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+        .form-actions { display: flex; gap: var(--spacing-md); justify-content: flex-end; }
 
-        .boards-list { display: flex; flex-direction: column; gap: 1rem; }
-        .load-more { text-align: center; margin-top: 1.5rem; }
-        .load-more .btn { min-width: 180px; }
+        /* 게시글 목록 */
+        .boards-list { display: flex; flex-direction: column; gap: var(--spacing-lg); }
 
+        /* 게시글 카드 */
         .board-card {
-            background: var(--card-bg);
-            border-radius: 18px;
-            padding: 1.25rem;
-            box-shadow: var(--shadow);
-            transition: all 0.25s;
-            border: 1px solid var(--border);
+            transition: all 0.25s; /* 호버 효과를 위해 */
             animation: fadeIn 0.32s;
             position: relative;
-            overflow: hidden;
+            overflow: hidden; /* before 유사 요소가 넘치지 않도록 */
+            cursor: pointer; /* 클릭 가능하도록 */
         }
+        /* 카드 내부 배경 효과 */
         .board-card::before {
             content: "";
             position: absolute;
@@ -145,76 +228,191 @@
             background: linear-gradient(120deg, rgba(15, 118, 110, 0.06), transparent 38%);
             pointer-events: none;
         }
-        @media (min-width: 640px) { .board-card { padding: 1.5rem; } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .board-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); border-color: #b9e6df; }
 
-        .board-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; gap: 0.75rem; }
+        .board-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-md); gap: var(--spacing-md); }
         .board-title { font-size: 1.0625rem; font-weight: 600; line-height: 1.4; flex: 1; }
-        .board-actions { display: flex; gap: 0.375rem; flex-shrink: 0; }
+        .board-actions { display: flex; gap: var(--spacing-xs); flex-shrink: 0; }
         .board-content { color: var(--text-secondary); white-space: pre-wrap; font-size: 0.9375rem; line-height: 1.7; }
-        .board-meta { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem; }
+        .board-meta {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-md);
+            border-top: 1px solid var(--border);
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
 
-        body.compact .boards-list { gap: 0.6rem; }
+        /* 페이지네이션 컨트롤 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-2xl);
+            flex-wrap: wrap;
+        }
+        .pagination button {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+        .pagination button:hover:not(:disabled) {
+            background: #eef4f2;
+            border-color: var(--primary-light);
+            color: var(--primary);
+        }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 빈 상태 및 로딩 메시지 */
+        .empty-state { text-align: center; padding: var(--spacing-3xl) var(--spacing-2xl); color: var(--text-secondary); border: 1px dashed var(--border); }
+        .empty-state svg { width: 48px; height: 48px; margin-bottom: var(--spacing-lg); opacity: 0.5; }
+        .loading { text-align: center; padding: var(--spacing-3xl) var(--spacing-2xl); color: var(--text-secondary); }
+
+        /* 스피너 */
+        .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto var(--spacing-lg); }
+
+        /* 에러 메시지 */
+        .error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--danger); /* Note: danger color for error message text */
+            padding: var(--spacing-lg);
+            border-radius: 12px;
+            margin-bottom: var(--spacing-lg);
+            font-size: 0.9375rem;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            animation: slideDown 0.3s;
+        }
+        .hidden { display: none !important; }
+
+        /* 편집 폼 (모달로 전환되므로 불필요) */
+        /* #editForm {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+            animation: slideDown 0.3s;
+        } */
+
+        /* 토스트 알림 */
+        .toast-container {
+            position: fixed;
+            top: var(--spacing-2xl);
+            right: var(--spacing-2xl);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        .toast {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            animation: slideInRight 0.3s;
+            box-shadow: var(--shadow-lg);
+            max-width: 320px;
+        }
+        .toast-success { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success-text); }
+        .toast-error { background: var(--error-bg); border: 1px solid var(--error-border); color: var(--error-text); }
+        .toast-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+        /* 모달 오버레이 */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+            padding: var(--spacing-lg);
+            animation: fadeIn 0.2s;
+        }
+        .modal {
+            max-width: 400px;
+            width: 100%;
+            backdrop-filter: blur(8px); /* 모달에도 블러 효과 추가 */
+            animation: scaleIn 0.2s;
+        }
+        .modal-title { font-size: 1.125rem; font-weight: 600; margin-bottom: var(--spacing-md); }
+        .modal-content { color: var(--text-secondary); margin-bottom: var(--spacing-2xl); font-size: 0.9375rem; }
+        .modal-actions { display: flex; gap: var(--spacing-md); justify-content: flex-end; }
+
+        /* 버튼 로딩 상태 */
+        .btn-loading { position: relative; color: transparent !important; }
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 2px solid;
+            border-color: white transparent white white; /* 상단만 투명 */
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%); /* 중앙 정렬 */
+        }
+
+        /* ==================== 애니메이션 ==================== */
+        @keyframes pageRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        /* ==================== 반응형 디자인 ==================== */
+        @media (max-width: 639px) {
+            .container { padding: var(--spacing-lg); }
+            h1 { font-size: 1.7rem; }
+            .board-header { flex-direction: column; align-items: flex-start; }
+            .board-actions { width: 100%; margin-top: var(--spacing-sm); }
+            .board-actions .btn { flex: 1; justify-content: center; margin-right: 0; } /* 버튼을 가로로 꽉 채움 */
+            .toast-container { left: var(--spacing-2xl); right: var(--spacing-2xl); top: var(--spacing-2xl); }
+            .toast { max-width: none; } /* 모바일에서 토스트 너비 제한 해제 */
+            .view-toggle { width: 100%; max-width: 210px; }
+        }
+
+        /* 컴팩트 모드 스타일 */
+        body.compact .boards-list { gap: var(--spacing-md); }
         body.compact .board-card {
             border-radius: 14px;
-            padding: 0.9rem 1rem;
+            padding: var(--spacing-lg) var(--spacing-xl);
             box-shadow: 0 6px 16px rgba(17, 24, 39, 0.06);
         }
         body.compact .board-card::before { opacity: 0.55; }
-        body.compact .board-header { margin-bottom: 0.45rem; }
+        body.compact .board-header { margin-bottom: var(--spacing-xs); }
         body.compact .board-title { font-size: 0.98rem; }
         body.compact .board-content {
             font-size: 0.88rem;
             line-height: 1.55;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
+            -webkit-line-clamp: 2; /* 두 줄로 제한 */
             -webkit-box-orient: vertical;
             overflow: hidden;
+            text-overflow: ellipsis; /* 말줄임표 */
         }
-        body.compact .board-meta { margin-top: 0.55rem; padding-top: 0.55rem; font-size: 0.77rem; }
+        body.compact .board-meta { margin-top: var(--spacing-sm); padding-top: var(--spacing-sm); font-size: 0.77rem; }
         body.compact .btn-edit, body.compact .btn-danger { padding: 0.4rem 0.72rem; font-size: 0.76rem; }
-
-        .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary); background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--border); }
-        .empty-state svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5; }
-
-        .loading { text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary); }
-        .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .error { background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; font-size: 0.9375rem; display: flex; align-items: center; gap: 0.75rem; animation: slideDown 0.3s; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .hidden { display: none !important; }
-
-        #editForm { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); animation: slideDown 0.3s; }
-
-        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 1000; display: flex; flex-direction: column; gap: 0.75rem; }
-        .toast { padding: 1rem 1.25rem; border-radius: 12px; font-size: 0.9375rem; font-weight: 500; display: flex; align-items: center; gap: 0.75rem; animation: slideInRight 0.3s; box-shadow: var(--shadow-lg); max-width: 320px; }
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        .toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-        .toast-error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
-        .toast-icon { width: 20px; height: 20px; flex-shrink: 0; }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1001; padding: 1rem; animation: fadeIn 0.2s; }
-        .modal { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; max-width: 400px; width: 100%; box-shadow: var(--shadow-lg); animation: scaleIn 0.2s; }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .modal-title { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; }
-        .modal-content { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9375rem; }
-        .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
-
-        .btn-loading { position: relative; color: transparent !important; }
-        .btn-loading::after { content: ''; position: absolute; width: 16px; height: 16px; border: 2px solid white; border-right-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
-
-        @media (max-width: 639px) {
-            h1 { font-size: 1.7rem; }
-            .board-header { flex-direction: column; align-items: flex-start; }
-            .board-actions { width: 100%; }
-            .board-actions .btn { flex: 1; justify-content: center; margin-right: 0; }
-            .toast-container { left: 1rem; right: 1rem; top: 1rem; }
-            .toast { max-width: none; }
-            .view-toggle { width: 100%; max-width: 210px; }
-        }
     </style>
 </head>
 <body>
@@ -247,40 +445,15 @@
             <span id="errorText"></span>
         </div>
 
-        <!-- 게시글 작성 폼 -->
-        <div class="form-card">
-            <h2 class="form-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                새 글 작성
-            </h2>
-            <form id="createForm">
-                <div class="form-group">
-                    <label for="title">제목</label>
-                    <input type="text" id="title" name="title" required placeholder="제목을 입력하세요..." maxlength="200">
-                </div>
-                <div class="form-group">
-                    <label for="content">내용</label>
-                    <textarea id="content" name="content" required placeholder="내용을 입력하세요..."></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                        작성
-                    </button>
-                </div>
-            </form>
-        </div>
+
 
         <!-- 게시글 목록 영역 -->
         <div class="boards-list" id="boardsList">
             <div class="loading"><div class="spinner"></div><p>게시글을 불러오는 중...</p></div>
         </div>
+
+        <!-- 페이지네이션 컨트롤 영역 -->
+        <div id="pagination" class="pagination"></div>
     </div>
 
     <!-- 토스트 알림 컨테이너 -->
@@ -290,11 +463,12 @@
         // ===== 상수 및 전역 변수 =====
         const API_BASE = '/boards';        // API 엔드포인트
         const DEFAULT_SIZE = 10;           // 기본 페이지 크기
+        const PAGE_RANGE = 5;              // 페이지네이션에 표시할 페이지 번호 개수 (현재 페이지 기준)
 
         // 페이지 상태 관리
-        let cursor = null;     // 다음 페이지 커서 (마지막 게시글 ID)
-        let hasMore = false;   // 더 불러올 데이터是否存在
-        let isLoading = false; // 로딩 중 여부
+        let currentPage = 1;     // 현재 페이지 번호
+        let totalPages = 1;      // 총 페이지 수
+        let isLoading = false;   // 로딩 중 여부
 
         // DOM 요소 참조
         const createForm = document.getElementById('createForm');
@@ -310,25 +484,27 @@
         const VIEW_MODE_KEY = 'board_view_mode';
 
         // ===== 공통 유틸 함수 =====
-        function getBoardsUrl() {
-            return cursor && cursor > 0
-                ? `${API_BASE}?last_id=${cursor}&size=${DEFAULT_SIZE}`
-                : `${API_BASE}?size=${DEFAULT_SIZE}`;
+        // 게시글 API URL 생성
+        function getBoardsUrl(page) {
+            return `${API_BASE}?page=${page}&size=${DEFAULT_SIZE}`;
         }
 
+        // 게시글 카드 HTML 생성
         function getCardsHtml(boards) {
             return boards.map(board => createBoardCard(board)).join('');
         }
 
+        // 응답 에러 메시지 파싱
         async function getErrorMessage(response, fallbackMessage) {
             try {
                 const error = await response.json();
-                return error.message || fallbackMessage;
+                return error.error || fallbackMessage; // 에러 메시지 필드를 'error'로 변경
             } catch {
                 return fallbackMessage;
             }
         }
 
+        // 뷰 모드 적용 (컴팩트/기본)
         function applyViewMode(mode) {
             const compact = mode === 'compact';
             document.body.classList.toggle('compact', compact);
@@ -337,26 +513,21 @@
         }
 
         // ===== 에러 표시 함수 =====
-        // 화면 상단에 에러 메시지를 표시합니다.
         function showError(message) {
             errorText.textContent = message;
             errorMessage.classList.remove('hidden');
         }
 
         // ===== 에러 숨김 함수 =====
-        // 에러 메시지를 숨깁니다.
         function hideError() {
             errorMessage.classList.add('hidden');
         }
 
         // ===== 토스트 알림 표시 함수 =====
-        // 화면 우측 상단에 알림 메시지를 표시합니다.
-        // type: 'success' 또는 'error'
         function showToast(message, type = 'success') {
             const toast = document.createElement('div');
             toast.className = `toast toast-${type}`;
             
-            // 타입에 따른 아이콘 선택
             const icon = type === 'success' 
                 ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
                 : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
@@ -364,7 +535,6 @@
             toast.innerHTML = `${icon}<span>${message}</span>`;
             toastContainer.appendChild(toast);
 
-            // 3초 후 자동으로 제거
             setTimeout(() => {
                 toast.style.animation = 'slideInRight 0.3s ease reverse';
                 setTimeout(() => toast.remove(), 300);
@@ -372,8 +542,6 @@
         }
 
         // ===== 모달 표시 함수 =====
-        // 확인/취소 버튼이 있는 모달 창을 표시합니다.
-        // onConfirm: 확인 버튼 클릭 시 실행할 콜백 함수
         function showModal(title, message, onConfirm) {
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
@@ -388,16 +556,12 @@
                 </div>`;
             document.body.appendChild(overlay);
             
-            // 취소 버튼: 모달 닫기
             overlay.querySelector('#modalCancel').onclick = () => overlay.remove();
-            // 확인 버튼: 콜백 실행 후 모달 닫기
             overlay.querySelector('#modalConfirm').onclick = () => { overlay.remove(); onConfirm(); };
-            // 배경 클릭 시 모달 닫기
             overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
         }
 
         // ===== 버튼 로딩 상태 설정 함수 =====
-        // 버튼에 로딩 스피너를 표시하거나 해제합니다.
         function setButtonLoading(btn, loading) {
             if (loading) { 
                 btn.classList.add('btn-loading'); 
@@ -409,82 +573,54 @@
         }
 
         // ===== 게시글 목록 조회 함수 =====
-        // 서버에서 게시글 목록을 조회합니다.
-        // append: true면 기존 목록에 추가, false면 새로고침
-        async function fetchBoards(append = false) {
-            // 중복 요청 방지
+        // 서버에서 게시글 목록을 조회하고 렌더링합니다.
+        async function fetchBoards(pageToFetch = currentPage) {
             if (isLoading) return;
             isLoading = true;
-            updateLoadMoreButton(); // 버튼 상태 업데이트
-
-            // 첫 페이지가 아니면 로딩 스피너 표시
-            if (!append) { 
-                boardsList.innerHTML = LOADING_HTML;
-            }
+            
+            boardsList.innerHTML = LOADING_HTML;
+            document.getElementById('pagination').innerHTML = ''; // 페이지네이션 초기화
 
             try {
                 hideError();
 
-                // 커서 기반 페이징: 커서가 있으면 last_id 파라미터 포함
-                const response = await fetch(getBoardsUrl());
-                if (!response.ok) throw new Error(`HTTP ${response.status}: 서버 오류`);
+                const response = await fetch(getBoardsUrl(pageToFetch));
+                if (!response.ok) throw new Error(await getErrorMessage(response, '게시글 목록을 불러오는데 실패했습니다'));
                 
                 const result = await response.json();
                 
-                // 응답 유효성 검증
                 if (!result.data || !result.pagination) {
                     throw new Error('잘못된 응답 형식');
                 }
 
                 // 페이지 상태 업데이트
-                cursor = result.pagination.next_cursor;
-                hasMore = result.pagination.has_more;
+                currentPage = result.pagination.current_page;
+                totalPages = result.pagination.total_pages;
 
                 // 목록 렌더링
-                if (append) appendBoards(result.data);
-                else renderBoards(result.data);
+                renderBoards(result.data);
+                renderPagination();
+
             } catch (error) {
                 console.error('게시글 목록 불러오기 실패:', error);
                 showError(error.message || '게시글을 불러오는데 실패했습니다');
-                if (!append) {
-                    boardsList.innerHTML = ERROR_HTML;
-                }
+                boardsList.innerHTML = ERROR_HTML;
+                document.getElementById('pagination').innerHTML = ''; // 에러 시 페이지네이션 제거
             } finally { 
                 isLoading = false;
-                updateLoadMoreButton();
             }
         }
 
-        // ===== 게시글 목록 렌더링 함수 (새로고침) =====
-        // 게시글 목록을 처음부터 다시 그립니다.
+        // ===== 게시글 목록 렌더링 함수 =====
         function renderBoards(boards) {
             if (boards.length === 0) {
                 boardsList.innerHTML = EMPTY_HTML;
                 return;
             }
-            boardsList.innerHTML = getCardsHtml(boards);
-            addLoadMoreButton();
-        }
-
-        // ===== 게시글 목록 추가 함수 (무한 스크롤) =====
-        // 기존 목록에 새 게시글을 추가합니다.
-        function appendBoards(boards) {
-            // 빈 상태 메시지 제거
-            const emptyState = boardsList.querySelector('.empty-state');
-            if (emptyState) emptyState.remove();
-            
-            // "더 보기" 버튼 앞에 새 게시글 추가
-            const loadMoreDiv = boardsList.querySelector('.load-more');
-            const cardsHtml = getCardsHtml(boards);
-            if (loadMoreDiv) {
-                loadMoreDiv.insertAdjacentHTML('beforebegin', cardsHtml);
-            } else {
-                boardsList.insertAdjacentHTML('beforeend', cardsHtml);
-            }
+            boardsList.innerHTML = boards.map(board => createBoardCard(board)).join('');
         }
 
         // ===== 게시글 카드 HTML 생성 함수 =====
-        //单个 게시글의 HTML 요소를 생성합니다.
         function createBoardCard(board) {
             return `<div class="board-card" data-id="${board.id}">
                 <div class="board-header">
@@ -498,53 +634,47 @@
                 ${board.created_at ? `<div class="board-meta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>작성일: ${new Date(board.created_at).toLocaleString()}</div>` : ''}
             </div>`;
         }
+        
+        // ===== 페이지네이션 렌더링 함수 =====
+        function renderPagination() {
+            const paginationDiv = document.getElementById('pagination');
+            if (!paginationDiv) return; // 요소가 없으면 함수 종료
 
-        // ===== "더 보기" 버튼 추가 함수 =====
-        // 페이지 하단에 "더 보기" 버튼을 추가합니다.
-        function addLoadMoreButton() {
-            const existing = boardsList.querySelector('.load-more');
-            if (existing) existing.remove();
+            paginationDiv.innerHTML = ''; // 기존 페이지네이션 초기화
+
+            if (totalPages <= 1) return; // 총 페이지가 1개 이하면 페이지네이션 불필요
+
+            const startPage = Math.max(1, currentPage - Math.floor(PAGE_RANGE / 2));
+            const endPage = Math.min(totalPages, startPage + PAGE_RANGE - 1);
             
-            // 더 불러올 데이터가 있을 때만 버튼 생성
-            if (hasMore) {
-                const loadMoreDiv = document.createElement('div');
-                loadMoreDiv.className = 'load-more';
-                const btn = document.createElement('button');
-                btn.className = 'btn btn-primary';
-                btn.textContent = '더 보기';
-                btn.onclick = () => loadMore();
-                loadMoreDiv.appendChild(btn);
-                boardsList.appendChild(loadMoreDiv);
+            // "이전" 버튼
+            const prevBtn = document.createElement('button');
+            prevBtn.textContent = '이전';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => fetchBoards(currentPage - 1);
+            paginationDiv.appendChild(prevBtn);
+
+            // 페이지 번호 버튼들
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.textContent = i;
+                if (i === currentPage) {
+                    pageBtn.classList.add('active');
+                    pageBtn.disabled = true; // 현재 페이지는 비활성화
+                }
+                pageBtn.onclick = () => fetchBoards(i);
+                paginationDiv.appendChild(pageBtn);
             }
-        }
 
-        // ===== "더 보기" 버튼 상태 업데이트 함수 =====
-        // 로딩 상태에 따라 버튼을 업데이트합니다.
-        function updateLoadMoreButton() {
-            const loadMoreDiv = boardsList.querySelector('.load-more');
-            if (!loadMoreDiv) return;
-            
-            const btn = loadMoreDiv.querySelector('.btn');
-            if (!btn) return;
-
-            if (isLoading) {
-                btn.classList.add('btn-loading');
-                btn.disabled = true;
-            } else {
-                btn.classList.remove('btn-loading');
-                btn.disabled = false;
-                btn.textContent = hasMore ? '더 보기' : '더 이상 게시물이 없습니다';
-            }
-        }
-
-        // ===== 추가 페이지 로드 함수 =====
-        // "더 보기" 버튼 클릭 시 호출됩니다.
-        function loadMore() {
-            fetchBoards(true);
+            // "다음" 버튼
+            const nextBtn = document.createElement('button');
+            nextBtn.textContent = '다음';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => fetchBoards(currentPage + 1);
+            paginationDiv.appendChild(nextBtn);
         }
 
         // ===== HTML 이스케이프 함수 =====
-        // XSS 공격을 방지하기 위해 특수 문자를 변환합니다.
         function escapeHtml(text) { 
             const div = document.createElement('div'); 
             div.textContent = text; 
@@ -552,7 +682,6 @@
         }
 
         // ===== 게시글 생성 이벤트 핸들러 =====
-        // 새 글 작성 폼 제출 시 처리됩니다.
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             hideError();
@@ -560,7 +689,6 @@
             const title = document.getElementById('title').value.trim();
             const content = document.getElementById('content').value.trim();
 
-            // 입력 검증
             if (!title) { showError('제목을 입력해주세요.'); return; }
             if (!content) { showError('내용을 입력해주세요.'); return; }
 
@@ -577,9 +705,9 @@
                     throw new Error(await getErrorMessage(response, '게시글 작성에 실패했습니다'));
                 }
                 
-                createForm.reset();                // 폼 초기화
+                createForm.reset();                
                 showToast('게시글이 작성되었습니다.');
-                cursor = null;                     // 첫 페이지부터 다시 로드
+                currentPage = 1;                   // 새 글 작성 후 첫 페이지로 이동
                 await fetchBoards();
             } catch (error) {
                 showError(error.message);
@@ -589,17 +717,14 @@
         });
 
         // ===== 삭제 확인 모달 표시 함수 =====
-        // 삭제 전 확인 모달을 표시합니다.
         function confirmDelete(id) {
             showModal('게시글 삭제', '정말로 이 게시글을 삭제하시겠습니까?', () => deleteBoard(id));
         }
 
         // ===== 게시글 삭제 함수 =====
-        //指定된 ID의 게시글을 삭제합니다.
         async function deleteBoard(id) {
             hideError();
             
-            // 삭제 시각적 피드백: 카드 투명하게
             const card = document.querySelector(`.board-card[data-id="${id}"]`);
             if (card) { 
                 card.style.opacity = '0.5'; 
@@ -608,14 +733,13 @@
 
             try {
                 const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('게시글 삭제에 실패했습니다');
+                if (!response.ok) throw new Error(await getErrorMessage(response, '게시글 삭제에 실패했습니다'));
                 
                 showToast('게시글이 삭제되었습니다.');
-                cursor = null;
-                await fetchBoards();
+                // 삭제 후 현재 페이지 유지 (데이터가 부족하면 이전 페이지로 갈 수 있음)
+                await fetchBoards(currentPage); 
             } catch (error) {
                 showError(error.message);
-                // 실패 시 복원
                 if (card) { 
                     card.style.opacity = '1'; 
                     card.style.pointerEvents = 'auto'; 
@@ -624,18 +748,15 @@
         }
 
         // ===== 게시글 수정 폼 표시 함수 =====
-        //指定된 게시글의 수정 폼을 표시합니다.
         function editBoard(id, title, content) {
             const card = document.querySelector(`.board-card[data-id="${id}"]`);
             const existingEditForm = card.querySelector('#editForm');
             
-            // 이미 열려있으면 닫기
             if (existingEditForm) { 
                 existingEditForm.remove(); 
                 return; 
             }
 
-            // 수정 폼 생성
             const editForm = document.createElement('div');
             editForm.id = 'editForm';
             editForm.innerHTML = `<h3 style="margin-bottom: 1rem; font-size: 1rem; font-weight: 600;">글 수정</h3>
@@ -651,7 +772,6 @@
         }
 
         // ===== 게시글 수정 제출 함수 =====
-        // 수정된 내용을 서버에 전송합니다.
         async function submitEdit(event, id) {
             event.preventDefault();
             hideError();
@@ -674,10 +794,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title, content })
                 });
-                if (!response.ok) throw new Error('게시글 수정에 실패했습니다');
+                if (!response.ok) throw new Error(await getErrorMessage(response, '게시글 수정에 실패했습니다'));
                 
                 showToast('게시글이 수정되었습니다.');
-                await fetchBoards();
+                await fetchBoards(currentPage);
             } catch (error) {
                 showError(error.message);
             } finally { 
@@ -686,14 +806,13 @@
         }
 
         // ===== 초기화 =====
-        // 페이지 로드 시 게시글 목록을 조회합니다.
         applyViewMode(localStorage.getItem(VIEW_MODE_KEY) || 'default');
         viewToggleBtn.addEventListener('click', () => {
             const nextMode = document.body.classList.contains('compact') ? 'default' : 'compact';
             localStorage.setItem(VIEW_MODE_KEY, nextMode);
             applyViewMode(nextMode);
         });
-        fetchBoards();
+        fetchBoards(1); // 페이지 로드 시 첫 페이지 조회
     </script>
 </body>
 </html>

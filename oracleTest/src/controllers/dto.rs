@@ -24,27 +24,26 @@ impl From<Board> for BoardResponse {
     }
 }
 
-/// 커서 기반 페이징 요청 DTO
+/// 페이지네이션 요청 DTO
 #[derive(Debug, Deserialize)]
-pub struct CursorRequest {
-    pub last_id: Option<i64>,
-    pub size: Option<i64>,
+pub struct PaginationRequest {
+    pub page: Option<u32>,
+    pub size: Option<u32>,
 }
 
-/// 커서 기반 페이징 응답 DTO
+/// 페이지네이션 응답 DTO
 #[derive(Debug, Serialize)]
-pub struct CursorResponse {
+pub struct PaginationResponse {
     pub data: Vec<BoardResponse>,
-    pub pagination: CursorPagination,
+    pub pagination: PaginationMeta,
 }
 
-/// 페이징 정보 DTO
+/// 페이지네이션 메타데이터 DTO
 #[derive(Debug, Serialize)]
-pub struct CursorPagination {
-    pub last_id: Option<i64>,
-    pub next_cursor: Option<i64>,
-    pub size: i64,
-    pub has_more: bool,
+pub struct PaginationMeta {
+    pub current_page: u32,
+    pub total_pages: u32,
+    pub size: u32,
 }
 
 /// 게시글 생성을 위한 요청 DTO
