@@ -1,6 +1,9 @@
 //! Repository 계층: 데이터베이스 CRUD 작업
 
-use crate::common::queries::{DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, UPDATE_BOARD};
+use crate::common::queries::{
+    CHECK_BOARD_EXISTS, DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, SELECT_BOARD_BY_ID,
+    SELECT_BOARD_COUNT, SELECT_BOARD_SEQ_CURRVAL, UPDATE_BOARD,
+};
 use crate::models::board::{Board, DbPool};
 use oracle::{ErrorKind, Row}; // ErrorKind 추가
 use tracing::{debug, error, info, warn};
@@ -43,8 +46,7 @@ impl BoardRepository {
     pub async fn count_all(&self) -> Result<i64, oracle::Error> {
         info!("[Repository] count_all 호출됨");
         let conn = self.pool.conn.lock().await;
-        let sql = "SELECT COUNT(*) FROM BOARD";
-        let mut rows = conn.query(sql, &[])?;
+        let mut rows = conn.query(SELECT_BOARD_COUNT, &[])?;
 
         if let Some(row_result) = rows.next() {
             let count: i64 = row_result?.get(0)?;
@@ -59,8 +61,7 @@ impl BoardRepository {
     pub async fn find_by_id(&self, id: i64) -> Result<Option<Board>, oracle::Error> {
         info!("[Repository] find_by_id 호출됨, id={}", id);
         let conn = self.pool.conn.lock().await;
-        let sql = "SELECT ID, TITLE, CONTENT, CREATED_AT FROM BOARD WHERE ID = :1";
-        let mut rows = conn.query(sql, &[&id])?;
+        let mut rows = conn.query(SELECT_BOARD_BY_ID, &[&id])?;
 
         if let Some(row_result) = rows.next() {
             let row: Row = row_result?;
@@ -84,8 +85,7 @@ impl BoardRepository {
         );
         conn.commit()?;
 
-        let sql = "SELECT BOARD_SEQ.CURRVAL FROM DUAL";
-        let mut rows = conn.query(sql, &[])?;
+        let mut rows = conn.query(SELECT_BOARD_SEQ_CURRVAL, &[])?;
         if let Some(row_result) = rows.next() {
             let id: i64 = row_result?.get(0)?;
             info!("[Repository] insert 반환: 게시글 생성 완료 id={}", id);
@@ -105,8 +105,7 @@ impl BoardRepository {
         let conn = self.pool.conn.lock().await;
 
         // 업데이트 전 게시글 존재 여부 확인
-        let check_sql = "SELECT ID FROM BOARD WHERE ID = :1";
-        let mut check_rows = conn.query(check_sql, &[&id])?;
+        let mut check_rows = conn.query(CHECK_BOARD_EXISTS, &[&id])?;
         if check_rows.next().is_none() {
             debug!(
                 "[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재하지 않음",

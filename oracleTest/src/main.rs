@@ -1,5 +1,7 @@
 //! 메인 엔트리 포인트: 애플리케이션 초기화 및 서버 실행
 
+//! 메인 엔트리 포인트: 애플리케이션 초기화 및 서버 실행
+
 mod common;
 mod config;
 mod controllers;
