@@ -10,6 +10,7 @@ mod routes;
 mod services;
 
 use crate::common::app_state::AppState;
+use crate::common::utils::current_rss_kb;
 use crate::middleware::logging::log_middleware;
 use crate::routes::api_routes;
 use axum::middleware as axum_middleware;
@@ -64,6 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {}
         _ = tokio::signal::ctrl_c() => {
             info!("서버 종료 중...");
+            info!("종료 시 메모리 사용량: {} KB", current_rss_kb());
         }
     }
 
