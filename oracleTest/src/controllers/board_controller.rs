@@ -1,85 +1,33 @@
+//! `board` 리소스에 대한 HTTP 요청을 처리하는 핸들러 함수들
+
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::{Html, Json},
+    response::Html,
+    Json,
 };
-use serde::{Deserialize, Serialize};
-use tracing::{error, info};
+use tracing::info;
 
-use crate::{
-    common::app_state::AppState, models::board::Board, services::board_service::ServiceError,
+use crate::common::app_state::AppState;
+
+use super::{
+    dto::{
+        BoardResponse, CreateBoardRequest, CursorRequest, CursorResponse, CursorPagination,
+        UpdateBoardRequest,
+    },
+    error::ControllerError,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BoardResponse {
-    pub id: i64,
-    pub title: String,
-    pub content: String,
-    pub created_at: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CursorRequest {
-    pub last_id: Option<i64>,
-    pub size: Option<i64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CursorResponse {
-    pub data: Vec<BoardResponse>,
-    pub pagination: CursorPagination,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CursorPagination {
-    pub last_id: Option<i64>,
-    pub next_cursor: Option<i64>,
-    pub size: i64,
-    pub has_more: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct CreateBoardRequest {
-    pub title: String,
-    pub content: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UpdateBoardRequest {
-    pub title: String,
-    pub content: String,
-}
-
-impl From<Board> for BoardResponse {
-    fn from(board: Board) -> Self {
-        Self {
-            id: board.id,
-            title: board.title,
-            content: board.content,
-            created_at: board.created_at.map(|ts| ts.to_string()),
-        }
-    }
-}
-
+/// 게시글 목록을 커서 기반 페이징으로 조회합니다.
 pub async fn list_boards(
     State(state): State<AppState>,
     Query(cursor): Query<CursorRequest>,
-) -> Result<Json<CursorResponse>, StatusCode> {
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");      
+) -> Result<Json<CursorResponse>, ControllerError> {
     info!("[Controller] list_boards 호출됨, cursor={:?}", cursor);
-
     let size = cursor.size.unwrap_or(10);
 
-    let (boards, next_cursor) = state
-        .service
-        .get_boards_cursor(cursor.last_id, size)
-        .await
-        .map_err(|e| {
-            error!("게시글 목록 조회 실패: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    // 서비스 계층을 호출하여 데이터를 가져옵니다. `?` 연산자로 에러를 자동으로 처리합니다.
+    let (boards, next_cursor) = state.service.get_boards_cursor(cursor.last_id, size).await?;
 
     let has_more = boards.len() as i64 == size;
     let data = boards.into_iter().map(BoardResponse::from).collect();
@@ -95,93 +43,50 @@ pub async fn list_boards(
     }))
 }
 
+/// 특정 ID의 게시글을 조회합니다.
 pub async fn get_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<Json<BoardResponse>, StatusCode> {
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");      
+) -> Result<Json<BoardResponse>, ControllerError> {
     info!("[Controller] get_board 호출됨, id={}", id);
-    match state.service.get_board(id).await {
-        Ok(board) => Ok(Json(BoardResponse::from(board))),
-        Err(ServiceError::NotFound) => Err(StatusCode::NOT_FOUND),
-        Err(e) => {
-            error!("게시글 조회 실패: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+    let board = state.service.get_board(id).await?;
+    Ok(Json(BoardResponse::from(board)))
 }
 
+/// 새로운 게시글을 생성합니다.
 pub async fn create_board(
     State(state): State<AppState>,
     Json(req): Json<CreateBoardRequest>,
-) -> Result<Json<BoardResponse>, StatusCode> {
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");      
+) -> Result<(StatusCode, Json<BoardResponse>), ControllerError> {
     info!("[Controller] create_board 호출됨, title={}", req.title);
-    let id = state
-        .service
-        .create_board(&req.title, &req.content)
-        .await
-        .map_err(|e| {
-            error!("게시글 생성 실패: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-    Ok(Json(BoardResponse {
-        id,
-        title: req.title,
-        content: req.content,
-        created_at: None,
-    }))
+    let board = state.service.create_board(&req.title, &req.content).await?;
+    Ok((StatusCode::CREATED, Json(BoardResponse::from(board))))
 }
 
+/// 기존 게시글을 수정합니다.
 pub async fn update_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
     Json(req): Json<UpdateBoardRequest>,
-) -> Result<StatusCode, StatusCode> {
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");      
+) -> Result<StatusCode, ControllerError> {
     info!("[Controller] update_board 호출됨, id={}", id);
-    state
-        .service
-        .update_board(id, &req.title, &req.content)
-        .await
-        .map_err(|e| {
-            error!("게시글 수정 실패: {:?}", e);
-            match e {
-                ServiceError::NotFound => StatusCode::NOT_FOUND,
-                _ => StatusCode::INTERNAL_SERVER_ERROR,
-            }
-        })?;
+    state.service.update_board(id, &req.title, &req.content).await?;
     Ok(StatusCode::OK)
 }
 
+/// 특정 ID의 게시글을 삭제합니다.
 pub async fn delete_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
-) -> Result<StatusCode, StatusCode> {
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");      
+) -> Result<StatusCode, ControllerError> {
     info!("[Controller] delete_board 호출됨, id={}", id);
-    state.service.delete_board(id).await.map_err(|e| {
-        error!("게시글 삭제 실패: {:?}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-    Ok(StatusCode::OK)
+    state.service.delete_board(id).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn serve_index() -> Result<Html<String>, StatusCode> {
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");        
-    info!("[Controller] =================================");                
-    info!("[Controller] static/index.html 호출됨");    
-    tokio::fs::read_to_string("static/index.html")
-        .await
-        .map(Html)
-        .map_err(|_| StatusCode::NOT_FOUND)
+/// 정적 파일을 서빙합니다 (예: index.html).
+pub async fn serve_index() -> Result<Html<String>, ControllerError> {
+    info!("[Controller] static/index.html 호출됨");
+    let content = tokio::fs::read_to_string("static/index.html").await?;
+    Ok(Html(content))
 }

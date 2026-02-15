@@ -1,12 +1,12 @@
 //! Repository 계층: 데이터베이스 CRUD 작업
 
 use crate::common::queries::{
-    CHECK_BOARD_EXISTS, DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, SELECT_BOARD_BY_ID,
-    SELECT_BOARD_COUNT, SELECT_BOARD_SEQ_CURRVAL, UPDATE_BOARD,
+    DELETE_BOARD, INSERT_BOARD, SELECT_BOARD, SELECT_BOARD_BY_ID, 
+    SELECT_BOARD_SEQ_CURRVAL, UPDATE_BOARD,
 };
 use crate::models::board::{Board, DbPool};
-use oracle::{ErrorKind, Row}; // ErrorKind 추가
-use tracing::{debug, error, info, warn};
+use oracle::{ErrorKind, Row};
+use tracing::{debug, info, warn};
 
 /// 게시판 데이터베이스 접근 객체 (DAO)
 pub struct BoardRepository {
@@ -14,158 +14,94 @@ pub struct BoardRepository {
 }
 
 impl BoardRepository {
+    /// 새로운 Repository 인스턴스 생성
     pub fn new(pool: DbPool) -> Self {
         Self { pool }
     }
 
-    /// 커서 기반 페이징 조회
+    /// 커서 기반 페이징으로 게시글 목록 조회
     pub async fn find_by_cursor(
         &self,
         last_id: Option<i64>,
         size: i64,
     ) -> Result<Vec<Board>, oracle::Error> {
-        info!(
-            "[Repository] find_by_cursor 호출됨, last_id={:?}, size={}",
-            last_id, size
-        );
+        info!("[Repo] find_by_cursor 호출: last_id={:?}, size={}", last_id, size);
         let conn = self.pool.conn.lock().await;
+
         // :1 (IS NULL check), :2 (ID < :2), :3 (FETCH)
         let rows = conn.query(SELECT_BOARD, &[&last_id, &last_id, &size])?;
 
-        let mut boards = Vec::new();
-        for row_result in rows {
-            let row: Row = row_result?;
-            let board = self.row_to_board(row)?;
-            boards.push(board);
-        }
-        debug!("[Repository] find_by_cursor 반환: {}개", boards.len());
-        Ok(boards)
+        // 쿼리 결과를 `Board` 벡터로 변환 (함수형 스타일)
+        rows.map(|row_result| self.row_to_board(row_result?))
+            .collect()
     }
 
-    /// 전체 게시글 수 조회
-    pub async fn count_all(&self) -> Result<i64, oracle::Error> {
-        info!("[Repository] count_all 호출됨");
-        let conn = self.pool.conn.lock().await;
-        let mut rows = conn.query(SELECT_BOARD_COUNT, &[])?;
-
-        if let Some(row_result) = rows.next() {
-            let count: i64 = row_result?.get(0)?;
-            debug!("[Repository] count_all 반환: {}개", count);
-            Ok(count)
-        } else {
-            Ok(0)
-        }
-    }
-
-    /// ID로 게시글 조회 (SELECT WHERE ID = ?)
+    /// ID로 단일 게시글 조회
     pub async fn find_by_id(&self, id: i64) -> Result<Option<Board>, oracle::Error> {
-        info!("[Repository] find_by_id 호출됨, id={}", id);
+        info!("[Repo] find_by_id 호출: id={}", id);
         let conn = self.pool.conn.lock().await;
         let mut rows = conn.query(SELECT_BOARD_BY_ID, &[&id])?;
-
-        if let Some(row_result) = rows.next() {
-            let row: Row = row_result?;
-            let board = self.row_to_board(row)?;
-            debug!("[Repository] find_by_id 반환: 게시글 id={} 찾음", board.id);
-            Ok(Some(board))
-        } else {
-            debug!("[Repository] find_by_id 반환: 게시글 id={} 없음", id);
-            Ok(None)
-        }
+        // 첫 번째 행이 있으면 `row_to_board`를 적용하고, 없으면 None 반환
+        rows.next()
+            .map(|row_result| self.row_to_board(row_result?))
+            .transpose()
     }
 
-    /// 게시글 추가 (INSERT) 및 생성된 ID 반환
+    /// 새 게시글 추가 후 생성된 ID 반환
     pub async fn insert(&self, title: &str, content: &str) -> Result<i64, oracle::Error> {
-        info!("[Repository] insert 호출됨, title={}", title);
+        info!("[Repo] insert 호출: title={}", title);
         let conn = self.pool.conn.lock().await;
+        
         let stmt = conn.execute(INSERT_BOARD, &[&title, &content])?;
-        debug!(
-            "[Repository] INSERT 쿼리 실행, 영향 받은 행: {}",
-            stmt.row_count()?
-        );
+        debug!("[Repo] INSERT 실행, 영향 받은 행: {}", stmt.row_count()?);
         conn.commit()?;
 
         let mut rows = conn.query(SELECT_BOARD_SEQ_CURRVAL, &[])?;
-        if let Some(row_result) = rows.next() {
-            let id: i64 = row_result?.get(0)?;
-            info!("[Repository] insert 반환: 게시글 생성 완료 id={}", id);
-            Ok(id)
-        } else {
-            error!("[Repository] ID 조회 실패: BOARD_SEQ.CURRVAL 조회 오류");
-            Err(oracle::Error::new(
-                ErrorKind::Other, // ErrorKind::Other 사용
-                "Failed to get CURRVAL after insert",
-            ))
-        }
+        rows.next()
+            .transpose()?
+            .map_or_else(
+                || Err(oracle::Error::new(ErrorKind::Other, "Failed to get CURRVAL after insert")),
+                |row| row.get(0)
+            )
     }
 
-    /// 게시글 수정 (UPDATE)
+    /// 게시글 수정
     pub async fn update(&self, id: i64, title: &str, content: &str) -> Result<bool, oracle::Error> {
-        info!("[Repository] update 호출됨, id={}, title={}", id, title);
+        info!("[Repo] update 호출: id={}, title={}", id, title);
         let conn = self.pool.conn.lock().await;
 
-        // 업데이트 전 게시글 존재 여부 확인
-        let mut check_rows = conn.query(CHECK_BOARD_EXISTS, &[&id])?;
-        if check_rows.next().is_none() {
-            debug!(
-                "[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재하지 않음",
-                id
-            );
-            return Ok(false); // 게시글이 존재하지 않으면 업데이트할 필요 없음
-        }
-        debug!(
-            "[Repository] update: 게시글 id={} 업데이트 전 확인 - 존재함",
-            id
-        );
-
-        let rows_affected = conn
-            .execute(UPDATE_BOARD, &[&title, &content, &id])?
-            .row_count()?;
+        let rows_affected = conn.execute(UPDATE_BOARD, &[&title, &content, &id])?.row_count()?;
         conn.commit()?;
-        if rows_affected > 0 {
-            debug!("[Repository] update 반환: 게시글 id={} 수정 완료", id);
-            Ok(true)
-        } else {
-            warn!("[Repository] 수정할 게시글을 찾을 수 없음: id={}", id);
-            debug!(
-                "[Repository] update 반환: 게시글 id={} 수정 실패 (영향 받은 행 없음)",
-                id
-            );
-            Ok(false)
+
+        if rows_affected == 0 {
+            warn!("[Repo] 수정할 게시글 없음: id={}", id);
         }
+        
+        Ok(rows_affected > 0)
     }
 
-    /// 게시글 삭제 (DELETE)
+    /// 게시글 삭제
     pub async fn delete(&self, id: i64) -> Result<bool, oracle::Error> {
-        info!("[Repository] delete 호출됨, id={}", id);
+        info!("[Repo] delete 호출: id={}", id);
         let conn = self.pool.conn.lock().await;
+        
         let rows_affected = conn.execute(DELETE_BOARD, &[&id])?.row_count()?;
         conn.commit()?;
-        if rows_affected > 0 {
-            debug!("[Repository] delete 반환: 게시글 id={} 삭제 완료", id);
-            Ok(true)
-        } else {
-            warn!("[Repository] 삭제할 게시글을 찾을 수 없음: id={}", id);
-            debug!(
-                "[Repository] delete 반환: 게시글 id={} 삭제 실패 (영향 받은 행 없음)",
-                id
-            );
-            Ok(false)
+
+        if rows_affected == 0 {
+            warn!("[Repo] 삭제할 게시글 없음: id={}", id);
         }
+
+        Ok(rows_affected > 0)
     }
 
     /// DB Row를 Board 구조체로 변환하는 헬퍼 함수
     fn row_to_board(&self, row: Row) -> Result<Board, oracle::Error> {
-        let id: i64 = row.get("ID")?;
-        let title: Option<String> = row.get("TITLE")?;
-        let content: Option<String> = row.get("CONTENT")?;
-        let created_at: Option<oracle::sql_type::Timestamp> = row.get("CREATED_AT")?;
-
         Ok(Board {
-            id,
-            title: title.unwrap_or_default(),
-            content: content.unwrap_or_default(),
-            created_at,
+            id: row.get("ID")?,
+            title: row.get::<&str, Option<String>>("TITLE")?.unwrap_or_default(),
+            content: row.get::<&str, Option<String>>("CONTENT")?.unwrap_or_default(),
+            created_at: row.get("CREATED_AT")?,
         })
     }
 }
