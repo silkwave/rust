@@ -65,6 +65,11 @@ pub async fn list_boards(
     State(state): State<AppState>,
     Query(cursor): Query<CursorRequest>,
 ) -> Result<Json<CursorResponse>, StatusCode> {
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");      
+    info!("[Controller] list_boards 호출됨, cursor={:?}", cursor);
+
     let size = cursor.size.unwrap_or(10);
 
     let (boards, next_cursor) = state
@@ -94,6 +99,9 @@ pub async fn get_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<Json<BoardResponse>, StatusCode> {
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");      
     info!("[Controller] get_board 호출됨, id={}", id);
     match state.service.get_board(id).await {
         Ok(board) => Ok(Json(BoardResponse::from(board))),
@@ -109,6 +117,9 @@ pub async fn create_board(
     State(state): State<AppState>,
     Json(req): Json<CreateBoardRequest>,
 ) -> Result<Json<BoardResponse>, StatusCode> {
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");      
     info!("[Controller] create_board 호출됨, title={}", req.title);
     let id = state
         .service
@@ -131,6 +142,9 @@ pub async fn update_board(
     State(state): State<AppState>,
     Json(req): Json<UpdateBoardRequest>,
 ) -> Result<StatusCode, StatusCode> {
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");      
     info!("[Controller] update_board 호출됨, id={}", id);
     state
         .service
@@ -150,6 +164,9 @@ pub async fn delete_board(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<StatusCode, StatusCode> {
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");      
     info!("[Controller] delete_board 호출됨, id={}", id);
     state.service.delete_board(id).await.map_err(|e| {
         error!("게시글 삭제 실패: {:?}", e);
@@ -159,6 +176,10 @@ pub async fn delete_board(
 }
 
 pub async fn serve_index() -> Result<Html<String>, StatusCode> {
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");        
+    info!("[Controller] =================================");                
+    info!("[Controller] static/index.html 호출됨");    
     tokio::fs::read_to_string("static/index.html")
         .await
         .map(Html)
