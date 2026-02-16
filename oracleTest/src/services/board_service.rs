@@ -1,6 +1,6 @@
 //! Service 계층: 비즈니스 로직 및 유효성 검사
 
-use crate::models::board::Board;
+use crate::models::board::{Board, BoardListItem};
 use crate::repositories::board_repository::BoardRepository;
 use std::sync::Arc;
 use tracing::{debug, info, warn};
@@ -36,8 +36,11 @@ impl BoardService {
         &self,
         page: u32,
         size: u32,
-    ) -> Result<(Vec<Board>, u32), ServiceError> {
-        info!("[Service] get_boards_paged 호출: page={}, size={}", page, size);
+    ) -> Result<(Vec<BoardListItem>, u32), ServiceError> {
+        info!(
+            "[Service] get_boards_paged 호출: page={}, size={}",
+            page, size
+        );
         self.validate_page(page)?;
         self.validate_size(size)?;
 
@@ -46,14 +49,24 @@ impl BoardService {
 
         // 요청한 페이지가 총 페이지 수를 초과하는 경우
         if page > total_pages && total_pages > 0 {
-            warn!("[Service] 요청 페이지 초과: page={}, total_pages={}", page, total_pages);
-            return Err(ServiceError::InvalidInput(format!("요청 페이지가 너무 큽니다. 최대 페이지: {}", total_pages)));
+            warn!(
+                "[Service] 요청 페이지 초과: page={}, total_pages={}",
+                page, total_pages
+            );
+            return Err(ServiceError::InvalidInput(format!(
+                "요청 페이지가 너무 큽니다. 최대 페이지: {}",
+                total_pages
+            )));
         }
 
         let offset = (page - 1) * size;
         let boards = self.repository.find_paged(offset, size).await?;
 
-        debug!("[Service] get_boards_paged 반환: {}개, 총 페이지: {}", boards.len(), total_pages);
+        debug!(
+            "[Service] get_boards_paged 반환: {}개, 총 페이지: {}",
+            boards.len(),
+            total_pages
+        );
         Ok((boards, total_pages))
     }
 
@@ -85,7 +98,12 @@ impl BoardService {
     }
 
     /// 게시글 수정 로직
-    pub async fn update_board(&self, id: i64, title: &str, content: &str) -> Result<(), ServiceError> {
+    pub async fn update_board(
+        &self,
+        id: i64,
+        title: &str,
+        content: &str,
+    ) -> Result<(), ServiceError> {
         info!("[Service] update_board 호출됨, id={}, title={}", id, title);
         self.validate_id(id)?;
         self.validate_title(title)?;
@@ -125,16 +143,20 @@ impl BoardService {
             Ok(())
         } else {
             warn!("[Service] 유효하지 않은 ID: {}", id);
-            Err(ServiceError::InvalidInput("ID는 0보다 커야 합니다.".to_string()))
+            Err(ServiceError::InvalidInput(
+                "ID는 0보다 커야 합니다.".to_string(),
+            ))
         }
     }
-    
+
     fn validate_page(&self, page: u32) -> Result<(), ServiceError> {
         if page > 0 {
             Ok(())
         } else {
             warn!("[Service] 유효하지 않은 페이지 번호: {}", page);
-            Err(ServiceError::InvalidInput("페이지 번호는 0보다 커야 합니다.".to_string()))
+            Err(ServiceError::InvalidInput(
+                "페이지 번호는 0보다 커야 합니다.".to_string(),
+            ))
         }
     }
 
@@ -143,7 +165,9 @@ impl BoardService {
             Ok(())
         } else {
             warn!("[Service] 유효하지 않은 size: {}", size);
-            Err(ServiceError::InvalidInput("size는 0보다 커야 합니다.".to_string()))
+            Err(ServiceError::InvalidInput(
+                "size는 0보다 커야 합니다.".to_string(),
+            ))
         }
     }
 

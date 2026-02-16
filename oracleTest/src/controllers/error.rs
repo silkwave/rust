@@ -1,9 +1,9 @@
 //! Controller 계층의 에러 처리를 담당하는 모듈
 
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
 use tracing::error;
@@ -38,7 +38,10 @@ impl IntoResponse for ControllerError {
             ControllerError::ServiceError(service_error) => {
                 // ServiceError를 HTTP 상태 코드로 매핑
                 match service_error {
-                    ServiceError::NotFound => (StatusCode::NOT_FOUND, "요청한 리소스를 찾을 수 없습니다.".to_string()),
+                    ServiceError::NotFound => (
+                        StatusCode::NOT_FOUND,
+                        "요청한 리소스를 찾을 수 없습니다.".to_string(),
+                    ),
                     ServiceError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, msg),
                     ServiceError::DatabaseError(db_err) => {
                         error!("데이터베이스 오류 발생: {:?}", db_err);

@@ -1,6 +1,6 @@
 //! Controller 계층에서 사용하는 데이터 전송 객체 (DTO) 모음
 
-use crate::models::board::Board;
+use crate::models::board::{Board, BoardListItem};
 use serde::{Deserialize, Serialize};
 
 /// 게시글 응답을 위한 DTO
@@ -20,6 +20,17 @@ impl From<Board> for BoardResponse {
             title: board.title,
             content: board.content,
             created_at: board.created_at.map(|ts| ts.to_string()),
+        }
+    }
+}
+
+impl From<BoardListItem> for BoardResponse {
+    fn from(board: BoardListItem) -> Self {
+        Self {
+            id: board.id,
+            title: board.title,
+            content: board.content,
+            created_at: board.created_at,
         }
     }
 }

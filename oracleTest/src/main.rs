@@ -41,7 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("서버 설정: {}:{}", config.server_host, config.server_port);
 
     // 3. 데이터베이스 연결 및 풀 생성
-    let manager = OracleConnectionManager::new(&config.db_user, &config.db_password, &config.db_connect);
+    let manager =
+        OracleConnectionManager::new(&config.db_user, &config.db_password, &config.db_connect);
     let pool = Pool::builder()
         .max_size(10) // 최대 연결 수 설정
         .build(manager)?;

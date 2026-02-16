@@ -1,11 +1,11 @@
+use crate::common::utils::current_rss_kb;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
-use tracing::{error, info, warn};
-use crate::common::utils::current_rss_kb; // current_rss_kb 함수 import
+use tracing::{error, info, warn}; // current_rss_kb 함수 import
 
 pub async fn log_middleware(req: Request<Body>, next: Next) -> impl IntoResponse {
     let method = req.method().clone();

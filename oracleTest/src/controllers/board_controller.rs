@@ -1,10 +1,10 @@
 //! `board` 리소스에 대한 HTTP 요청을 처리하는 핸들러 함수들
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::Html,
-    Json,
 };
 use tracing::info;
 
@@ -12,7 +12,7 @@ use crate::common::app_state::AppState;
 
 use super::{
     dto::{
-        BoardResponse, CreateBoardRequest, PaginationRequest, PaginationResponse, PaginationMeta,
+        BoardResponse, CreateBoardRequest, PaginationMeta, PaginationRequest, PaginationResponse,
         UpdateBoardRequest,
     },
     error::ControllerError,
@@ -23,7 +23,10 @@ pub async fn list_boards(
     State(state): State<AppState>,
     Query(pagination_req): Query<PaginationRequest>,
 ) -> Result<Json<PaginationResponse>, ControllerError> {
-    info!("[Controller] list_boards 호출됨, pagination_req={:?}", pagination_req);
+    info!(
+        "[Controller] list_boards 호출됨, pagination_req={:?}",
+        pagination_req
+    );
     let page = pagination_req.page.unwrap_or(1); // 기본 1페이지
     let size = pagination_req.size.unwrap_or(10); // 기본 10개
 
@@ -69,7 +72,10 @@ pub async fn update_board(
     Json(req): Json<UpdateBoardRequest>,
 ) -> Result<StatusCode, ControllerError> {
     info!("[Controller] update_board 호출됨, id={}", id);
-    state.service.update_board(id, &req.title, &req.content).await?;
+    state
+        .service
+        .update_board(id, &req.title, &req.content)
+        .await?;
     Ok(StatusCode::OK)
 }
 
