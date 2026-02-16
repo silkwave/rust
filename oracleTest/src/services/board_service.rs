@@ -42,7 +42,7 @@ impl BoardService {
         self.validate_size(size)?;
 
         let total_boards = self.repository.count_all().await?;
-        let total_pages = (total_boards + size - 1) / size;
+        let total_pages = total_boards.div_ceil(size);
 
         // 요청한 페이지가 총 페이지 수를 초과하는 경우
         if page > total_pages && total_pages > 0 {
@@ -74,7 +74,10 @@ impl BoardService {
         self.validate_title(title)?;
         self.validate_content(content)?;
 
-        let id = self.repository.insert(title, content).await?;
+        let id = self
+            .repository
+            .insert(title.to_string(), content.to_string())
+            .await?;
         info!("[Service] 게시글 생성 완료 id={}, 다시 조회합니다.", id);
 
         // 생성된 게시글을 다시 조회하여 완전한 객체로 반환
@@ -88,7 +91,10 @@ impl BoardService {
         self.validate_title(title)?;
         self.validate_content(content)?;
 
-        let updated = self.repository.update(id, title, content).await?;
+        let updated = self
+            .repository
+            .update(id, title.to_string(), content.to_string())
+            .await?;
         if updated {
             info!("[Service] update_board 반환: 게시글 수정 완료 id={}", id);
             Ok(())
