@@ -1,186 +1,196 @@
-# 프로젝트 지식 베이스
+# AGENTS.md - Developer Knowledge Base
 
-**생성일:** 2026-02-13
-**최종 업데이트:** 2026-02-14
+**Last Updated:** 2026-02-17
+**Project:** Rust Axum + Oracle Board API
 
-## 목차
-1.  [개요](#1-개요)
-2.  [아키텍처](#2-아키텍처)
-3.  [프로젝트 구조](#3-프로젝트-구조)
-4.  [코드 맵](#4-코드-맵)
-5.  [주요 컨벤션](#5-주요-컨벤션)
-6.  [금기 사항 (Anti-Patterns)](#6-금기-사항-anti-patterns)
-7.  [개발 명령어](#7-개발-명령어)
-8.  [참고 사항](#8-참고-사항)
-9.  [API 테스트 (cURL 명령어)](#9-api-테스트-curl-명령어)
+## 1. Quick Reference
 
-## 1. 개요
+| Command | Description |
+|---------|-------------|
+| `cargo build` | Build debug binary |
+| `cargo build --release` | Build optimized binary |
+| `cargo run` | Run server (requires `.env` file) |
+| `cargo fmt` | Format code |
+| `cargo clippy` | Lint code |
+| `cargo test` | Run all tests |
+| `cargo test <test_name>` | Run single test by name |
+| `cargo test -- --nocapture` | Run tests with output |
 
-이 프로젝트는 **Rust Axum 웹 프레임워크**와 **Oracle 데이터베이스**를 활용하여 개발된 게시판 REST API 서버입니다. CRUD(Create, Read, Update, Delete) 기능을 제공하며, Spring MVC 패턴을 적용한 명확한 계층형 아키텍처를 통해 유지보수성과 확장성을 고려하여 설계되었습니다.
-
-## 2. 아키텍처
-
-프로젝트는 Spring MVC 패턴을 따릅니다.
-- **Controller (Presentation Layer):** HTTP 요청을 처리하고 응답을 반환합니다. 서비스 계층을 호출합니다.
-- **Service (Business Logic Layer):** 핵심 비즈니스 로직을 구현하고 데이터를 검증합니다. 리포지토리 계층을 호출합니다.
-- **Repository (Data Access Layer):** 데이터베이스와의 상호작용을 담당하며 CRUD 작업을 수행합니다.
-- **Model (Data Model):** 데이터 구조를 정의합니다.
-
-## 3. 프로젝트 구조
+## 2. Architecture
 
 ```
-./
-├── src/
-│   ├── main.rs                    # 서버 진입점, Axum 라우트 정의
-│   ├── config/mod.rs              # .env 파일 기반 환경 설정
-│   ├── common/
-│   │   ├── mod.rs                 # 공통 모듈
-│   │   ├── app_state.rs          # 애플리케이션 상태 (Service 공유)
-│   │   └── queries.rs             # SQL 쿼리 로드 (include_str!)
-│   ├── models/
-│   │   ├── mod.rs                 # 모델 모듈
-│   │   └── board.rs              # Board 구조체, DB 연결 관리
-│   ├── repositories/
-│   │   ├── mod.rs                 # 리포지토리 모듈
-│   │   └── board_repository.rs    # Oracle CRUD 작업
-│   ├── services/
-│   │   ├── mod.rs                 # 서비스 모듈
-│   │   └── board_service.rs       # 비즈니스 로직, 유효성 검증
-│   ├── controllers/
-│   │   ├── mod.rs                 # 컨트롤러 모듈
-│   │   └── board_controller.rs   # HTTP 요청 핸들러
-│   ├── routes/
-│   │   └── mod.rs                 # 라우트 설정
-│   ├── middleware/
-│   │   └── logging.rs             # 로깅 미들웨어
-│   └── sql/
-│       ├── select_board.sql       # 게시글 조회 (커서 기반 페이징)
-│       ├── insert_board.sql       # 게시글 생성
-│       ├── update_board.sql       # 게시글 수정
-│       └── delete_board.sql       # 게시글 삭제
-├── static/
-│   └── index.html                 # Vanilla JS 프론트엔드 (커서 페이징 지원)
-├── Cargo.toml
-└── .env
+Controller (board_controller.rs) → Service (board_service.rs) → Repository (board_repository.rs)
 ```
 
-## 4. 코드 맵
+- **Controller**: HTTP request/response handling, extracts query/path params
+- **Service**: Business logic, validation, orchestrates repositories
+- **Repository**: Database operations, raw SQL execution
 
-| 심볼 | 유형 | 위치 | 역할 | 설명 |
-|------|------|------|------|------|
-| `AppState` | `Struct` | `common/app_state.rs` | 애플리케이션 상태 | Service를 공유하기 위한 상태 |
-| `list_boards` | `Fn` | `controllers/board_controller.rs` | GET `/boards` | 커서 기반 페이징 조회 |
-| `get_board` | `Fn` | `controllers/board_controller.rs` | GET `/boards/:id` | 특정 ID 조회 |
-| `create_board` | `Fn` | `controllers/board_controller.rs` | POST `/boards` | 게시글 생성 |
-| `update_board` | `Fn` | `controllers/board_controller.rs` | PUT `/boards/:id` | 게시글 수정 |
-| `delete_board` | `Fn` | `controllers/board_controller.rs` | DELETE `/boards/:id` | 게시글 삭제 |
-| `BoardService` | `Struct` | `services/board_service.rs` | 비즈니스 로직 | 게시글 관련 비즈니스 규칙 및 데이터 검증 |
-| `ServiceError` | `Enum` | `services/board_service.rs` | 오류 유형 | 서비스 계층에서 발생할 수 있는 오류 |
-| `BoardRepository` | `Struct` | `repositories/board_repository.rs` | 데이터베이스 작업 | Oracle DB와 직접 통신하여 CRUD 작업 수행 |
-| `Board` | `Struct` | `models/board.rs` | 데이터 모델 | 게시글 데이터 구조체 |
+## 3. Code Style Guidelines
 
-## 5. 주요 컨벤션
+### Naming Conventions
+- **Variables/Functions**: `snake_case` (e.g., `get_board`, `page_size`)
+- **Types (Structs/Enums)**: `PascalCase` (e.g., `BoardService`, `ServiceError`)
+- **Modules**: `snake_case` (e.g., `board_service`)
 
-*   **언어**: 모든 답변 및 코드 주석은 **한국어**로 작성합니다.
-*   **명명 규칙**:
-    *   변수 및 함수: `snake_case` (예: `my_variable`, `calculate_sum`)
-    *   타입 (구조체, 열거형 등): `PascalCase` (예: `MyStruct`, `ServiceError`)
-*   **로깅**:
-    *   `[계층명] 메시지` 형식을 사용합니다. (예: `[Controller]`, `[Service]`, `[Repository]`)
-    *   `info!`, `error!` 등의 매크로를 사용하여 적절한 로깅 레벨을 지정합니다.
+### Imports
+```rust
+// Standard: group by external → internal → parent
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+};
+use tracing::{debug, info, warn};
 
-## 6. 금기 사항 (Anti-Patterns)
-
-*   **타입 무시/강제 변환**: Rust의 강력한 타입 시스템을 우회하는 행위 (예: `as any`, `@ts-ignore`)
-*   **오류 무시**: `Result`나 `Option` 타입을 반환하는 함수의 오류를 제대로 처리하지 않고 무시하는 행위
-*   **빈 예외 처리**: 오류가 발생했을 때 아무런 동작도 하지 않는 빈 오류 처리 블록
-*   **테스트 부재**: 핵심 로직 및 기능에 대한 단위/통합 테스트 코드 작성 부재
-
-## 7. 개발 명령어
-
-```bash
-cargo build             # 프로젝트 빌드 (디버그 모드)
-cargo build --release  # 프로젝트 릴리스 모드로 빌드 (최적화)
-cargo run              # 빌드 후 서버 실행 (Ctrl+C로 종료 가능)
-cargo fmt              # Rust 코드 포맷팅
-cargo clippy           # Rust 코드 린트 검사
-cargo test             # 테스트 코드 실행
+use crate::models::board::Board;
+use crate::services::board_service::ServiceError;
 ```
 
-## 8. 참고 사항
+### Error Handling
+- Use custom error enums with `From<T>` implementations
+- Propagate errors with `?` operator
+- Convert at layer boundaries (ServiceError → ControllerError)
 
-*   **환경 설정**: 애플리케이션 실행 전에 `.env` 파일을 생성해야 합니다. (`dotenv` 크레이트 사용)
-*   **Oracle DB 연결**: `.env` 파일에 연결 정보 설정 (예: `DB_USER`, `DB_PASSWORD`, `DB_CONNECT`)
-    *   기본: `127.0.0.1:1521/ORCL`
-*   **정적 파일 서빙**: `/` 또는 `/index.html` 경로로 접근하면 `static/index.html` 파일이 서빙됩니다.
-*   **커서 기반 페이징**: Oracle의 `OFFSET-FETCH` 대신 `WHERE id < :last_id` 방식으로 커서 페이징을 구현하여 대규모 데이터에서 성능을 최적화합니다.
-*   **연결 관리**: 단일 연결 + Mutex 방식 사용 (단순하고 효과적인 동시성 제어)
+```rust
+// Service layer - define errors
+#[derive(Debug)]
+pub enum ServiceError {
+    NotFound,
+    InvalidInput(String),
+    DatabaseError(oracle::Error),
+}
 
-## 9. API 테스트 (cURL 명령어)
-
-게시판 API의 주요 CRUD 작업을 테스트하기 위한 `curl` 명령어 예시입니다. `localhost:8080`을 기본 URL로 사용하며 JSON 형식의 데이터를 주고받습니다.
-
-### 1. 게시글 목록 조회 - 커서 기반 페이징 (GET /boards)
-
-첫 페이지 조회:
-```bash
-curl -v "http://localhost:8080/boards?size=10"
-```
-
-응답 형식:
-```json
-{
-  "data": [
-    { "id": 10, "title": "...", "content": "...", "created_at": "..." }
-  ],
-  "pagination": {
-    "last_id": null,
-    "next_cursor": 5,
-    "size": 10,
-    "has_more": true
-  }
+impl From<oracle::Error> for ServiceError {
+    fn from(err: oracle::Error) -> Self {
+        ServiceError::DatabaseError(err)
+    }
 }
 ```
 
-다음 페이지 조회 (마지막 ID 사용):
-```bash
-curl -v "http://localhost:8080/boards?last_id=5&size=10"
+### Logging
+- Use `tracing` crate
+- Format: `[Layer] message` (e.g., `[Service] get_board called, id=5`)
+- Levels: `debug!`, `info!`, `warn!`, `error!`
+
+```rust
+info!("[Service] create_board called, title={}", title);
+debug!("[Repository] query returned {} rows", rows.len());
 ```
 
-### 2. 특정 게시글 조회 (GET /boards/{id})
+### Async/Await
+- All database operations are async
+- Use `Arc<T>` for shared state
+- Prefer `&self` for methods that don't need ownership
 
-`{id}` 부분에 조회하고 싶은 게시글의 실제 ID를 입력하세요.
+### Validation
+- Validate input in Service layer
+- Return `ServiceError::InvalidInput(String)` for bad input
 
-```bash
-curl -v http://localhost:8080/boards/29
+## 4. Project Structure
+
+```
+src/
+├── main.rs              # Entry point, router setup
+├── config/mod.rs        # .env loading
+├── common/
+│   ├── mod.rs
+│   ├── app_state.rs     # AppState (Arc<BoardService>)
+│   └── queries.rs       # SQL with include_str!
+├── models/
+│   └── board.rs         # Board, BoardListItem structs
+├── controllers/
+│   ├── mod.rs           # ControllerError, handler exports
+│   ├── board_controller.rs  # HTTP handlers
+│   ├── dto.rs           # Request/Response DTOs
+│   └── error.rs        # ControllerError impl
+├── services/
+│   ├── mod.rs
+│   └── board_service.rs # Business logic
+├── repositories/
+│   ├── mod.rs
+│   └── board_repository.rs # DB operations
+├── routes/mod.rs        # Router configuration
+├── middleware/
+│   └── logging.rs      # Tower HTTP tracing
+└── sql/
+    ├── select_board.sql
+    ├── insert_board.sql
+    ├── update_board.sql
+    └── delete_board.sql
+static/index.html        # Frontend
+.env                     # Environment (required)
 ```
 
-### 3. 게시글 생성 (POST /boards)
+## 5. Anti-Patterns (NEVER DO)
 
-`--data` 옵션에 JSON 형식으로 제목(`title`)과 내용(`content`)을 입력합니다.
+| Pattern | Forbidden | Use Instead |
+|---------|-----------|-------------|
+| Type suppression | `as any`, unsafe casts | Proper error handling |
+| Error ignoring | `unwrap()`, `expect()` | `?` with proper error types |
+| Empty catch | `catch { }` | Log and return error |
+| Sync DB in async | blocking calls in async | Always use async Oracle methods |
 
+## 6. Dependencies
+
+Key crates (see `Cargo.toml`):
+- **axum 0.7** - Web framework
+- **oracle 0.5.8** - Oracle DB driver
+- **tokio 1** - Async runtime
+- **tracing 0.1** - Logging
+- **serde 1** - Serialization
+- **dotenv 0.15** - Env vars
+
+**Note:** Edition is `2024` (unstable Rust).
+
+## 7. Environment Variables
+
+Create `.env` before running:
 ```bash
-curl -v -X POST -H "Content-Type: application/json" -d '{
-    "title": "새로운 게시글 제목",
-    "content": "이것은 새로 작성된 게시글의 내용입니다."
-}' http://localhost:8080/boards
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8080
+RUST_LOG=debug
+DB_USER=docker
+DB_PASSWORD=docker123
+DB_CONNECT=127.0.0.1:1521/ORCL
 ```
 
-### 4. 게시글 수정 (PUT /boards/{id})
-
-`{id}` 부분에 수정하고 싶은 게시글의 실제 ID를 입력하고, `--data` 옵션에 JSON 형식으로 수정할 제목(`title`)과 내용(`content`)을 입력합니다.
+## 8. Running Tests
 
 ```bash
-curl -v -X PUT -H "Content-Type: application/json" -d '{
-    "title": "수정된 게시글 제목",
-    "content": "이것은 수정된 게시글의 새로운 내용입니다."
-}' http://localhost:8080/boards/29
+# All tests
+cargo test
+
+# Single test (partial match)
+cargo test get_board
+
+# With output
+cargo test -- --nocapture
+
+# With logging
+RUST_LOG=debug cargo test
 ```
 
-### 5. 게시글 삭제 (DELETE /boards/{id})
+## 9. Common Tasks
 
-`{id}` 부분에 삭제하고 싶은 게시글의 실제 ID를 입력하세요.
+### Adding a new endpoint:
+1. Add DTO in `controllers/dto.rs`
+2. Add handler in `controllers/board_controller.rs`
+3. Add business logic in `services/board_service.rs`
+4. Add DB method in `repositories/board_repository.rs`
+5. Register route in `routes/mod.rs`
 
-```bash
-curl -v -X DELETE http://localhost:8080/boards/29
-```
+### Adding validation:
+1. Add validation method in Service layer
+2. Return `ServiceError::InvalidInput` on failure
+3. Controller automatically converts to HTTP 400
+
+## 10. API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/boards` | List boards (query: `page`, `size`) |
+| GET | `/boards/:id` | Get single board |
+| POST | `/boards` | Create board (JSON: `title`, `content`) |
+| PUT | `/boards/:id` | Update board |
+| DELETE | `/boards/:id` | Delete board |
+| GET | `/` | Serve static index.html |
