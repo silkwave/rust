@@ -45,6 +45,7 @@ impl BoardService {
         self.validate_size(size)?;
 
         let total_boards = self.repository.count_all().await?;
+        // 총 페이지 수를 계산합니다 (올림 처리).
         let total_pages = total_boards.div_ceil(size);
 
         // 요청한 페이지가 총 페이지 수를 초과하는 경우

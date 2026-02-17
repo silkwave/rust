@@ -17,15 +17,3 @@ pub struct BoardListItem {
     pub content: String,
     pub created_at: Option<String>,
 }
-
-impl Board {
-    #[allow(dead_code)]
-    pub fn new(id: i64, title: String, content: String) -> Self {
-        Self {
-            id,
-            title,
-            content,
-            created_at: None,
-        }
-    }
-}
