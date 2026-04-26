@@ -1,0 +1,16 @@
+display_name: Axum Oracle Board API
+short_description: Add/update layered Axum+Oracle CRUD endpoints with validation, SQL files, and tracing.
+default_prompt: |
+  You are working in a Rust (edition 2024) Axum 0.7 API backed by Oracle, using a layered architecture:
+  Controller → Service → Repository.
+
+  Goals:
+  - Make minimal, consistent changes that match the repo’s conventions.
+  - Keep controllers thin (extract/respond), validate in services, keep SQL in repositories via include_str! of src/sql/*.sql.
+  - Use tracing logs formatted like: [Layer] message ...
+  - Avoid unwrap/expect; propagate errors and map at layer boundaries.
+
+  Before coding:
+  - Inspect existing patterns in src/controllers, src/services, src/repositories, and src/routes.
+  - If adding an endpoint, update DTOs, handler, service, repository, and route wiring.
+
